@@ -3,397 +3,349 @@ import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import vertexShader from './shaders/flame.vert?raw';
 import fragmentShader from './shaders/flame.frag?raw';
 
-// Settings management
-const SETTINGS_KEY = 'flameSettings';
+// Global variables
 let currentImageIndex = 0;
 let maskImages = [];
+const meshes = [];
+const visibilitySettings = {};
+let gui = null;
 
-// Default settings for new images
-const defaultSettings = {
-    // Flame Shape
-    uFlameHeight: 1.5,
-    uFlameSpread: 0.2,
-    uDistortionAmount: 0.2,
-    uBaseWidth: 0.5,
-    uTipShape: 0.3,
-    
-    // Movement
-    uFlameSpeed: 1.0,
-    uTurbulence: 0.5,
-    uFlickerSpeed: 2.0,
-    uFlickerIntensity: 0.2,
-    uSwayAmount: 0.1,
-    uSwaySpeed: 0.5,
-    
-    // Appearance
-    uSourceIntensity: 1.0,
-    uNoiseScale: 1.0,
-    uAlphaFalloff: 0.3,
-    uDetailLevel: 1.0,
-    uBrightness: 1.0,
-    uContrast: 1.0,
-    
-    // Colors
-    uColor1: 0xffeb3b,  // Core color (yellow)
-    uColor2: 0xff9800,  // Mid color (orange)
-    uColor3: 0xff5722,  // Base color (red)
-    uColorMix: 0.5,     // Blend between colors
-    uColorShift: 0.0    // Shift color gradient
-};
-
-// Function to get all mask images
-async function getMaskImages() {
-    try {
-        const response = await fetch('/api/mask-images', {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new TypeError("Expected JSON response but got " + contentType);
-        }
-        
-        const data = await response.json();
-        console.log('API response:', data); // Debug log
-        
-        if (Array.isArray(data) && data.length > 0) {
-            maskImages = data;
-            console.log('Available mask images:', maskImages);
-        } else {
-            console.warn('No mask images found, using default');
-            maskImages = ['/flame_mask.png'];
-        }
-        
-        // Load the first image
-        loadMaskTexture(currentImageIndex);
-    } catch (e) {
-        console.error('Error loading mask images:', e);
-        // Fallback to default mask
-        maskImages = ['/flame_mask.png'];
-        loadMaskTexture(0);
-    }
-}
-
-let settingsStore = {};
-
-// Load saved settings
-try {
-    const savedSettings = localStorage.getItem(SETTINGS_KEY);
-    if (savedSettings) {
-        settingsStore = JSON.parse(savedSettings);
-    }
-} catch (e) {
-    console.warn('Failed to load saved settings:', e);
-}
-
-// Scene setup
+// Create scene
 const scene = new THREE.Scene();
 
-// Create camera with aspect ratio-aware frustum
-const aspect = window.innerWidth / window.innerHeight;
+// Create orthographic camera
 const frustumSize = 2;
+const aspect = window.innerWidth / window.innerHeight;
 const camera = new THREE.OrthographicCamera(
     frustumSize * aspect / -2,
     frustumSize * aspect / 2,
     frustumSize / 2,
     frustumSize / -2,
-    0,
-    1
+    1,
+    1000
 );
+camera.position.z = 1;
 
-// Create a plane geometry that matches the camera frustum
-const geometry = new THREE.PlaneGeometry(frustumSize * aspect, frustumSize);
-
-// Load the mask texture
-const textureLoader = new THREE.TextureLoader();
-let maskTexture = null;
-
-// Initialize material with all uniforms
-const material = new THREE.ShaderMaterial({
-    vertexShader: vertexShader,
-    fragmentShader: fragmentShader,
-    uniforms: {
-        uTime: { value: 0 },
-        uMask: { value: null },
-        // Flame Shape
-        uFlameHeight: { value: defaultSettings.uFlameHeight },
-        uFlameSpread: { value: defaultSettings.uFlameSpread },
-        uDistortionAmount: { value: defaultSettings.uDistortionAmount },
-        uBaseWidth: { value: defaultSettings.uBaseWidth },
-        uTipShape: { value: defaultSettings.uTipShape },
-        // Movement
-        uFlameSpeed: { value: defaultSettings.uFlameSpeed },
-        uTurbulence: { value: defaultSettings.uTurbulence },
-        uFlickerSpeed: { value: defaultSettings.uFlickerSpeed },
-        uFlickerIntensity: { value: defaultSettings.uFlickerIntensity },
-        uSwayAmount: { value: defaultSettings.uSwayAmount },
-        uSwaySpeed: { value: defaultSettings.uSwaySpeed },
-        // Appearance
-        uSourceIntensity: { value: defaultSettings.uSourceIntensity },
-        uNoiseScale: { value: defaultSettings.uNoiseScale },
-        uAlphaFalloff: { value: defaultSettings.uAlphaFalloff },
-        uDetailLevel: { value: defaultSettings.uDetailLevel },
-        uBrightness: { value: defaultSettings.uBrightness },
-        uContrast: { value: defaultSettings.uContrast },
-        // Colors
-        uColor1: { value: new THREE.Color(defaultSettings.uColor1) },
-        uColor2: { value: new THREE.Color(defaultSettings.uColor2) },
-        uColor3: { value: new THREE.Color(defaultSettings.uColor3) },
-        uColorMix: { value: defaultSettings.uColorMix },
-        uColorShift: { value: defaultSettings.uColorShift }
-    },
-    transparent: true
+// Create renderer
+const renderer = new THREE.WebGLRenderer({ 
+    antialias: true,
+    alpha: true 
 });
-
-// Create mesh
-const flame = new THREE.Mesh(geometry, material);
-scene.add(flame);
-
-// Create renderer and set size
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000, 0);
 document.body.appendChild(renderer.domElement);
 
-// Create next image button
+// Create UI elements
 const nextButton = document.createElement('button');
 nextButton.textContent = 'Next Image';
 nextButton.style.position = 'absolute';
 nextButton.style.bottom = '20px';
-nextButton.style.right = '20px';
-nextButton.style.padding = '10px 20px';
-nextButton.style.fontSize = '16px';
-nextButton.style.backgroundColor = '#4CAF50';
-nextButton.style.color = 'white';
-nextButton.style.border = 'none';
-nextButton.style.borderRadius = '5px';
-nextButton.style.cursor = 'pointer';
+nextButton.style.left = '20px';
 nextButton.style.zIndex = '1000';
 
-// Add image name display
 const imageNameDisplay = document.createElement('div');
 imageNameDisplay.style.position = 'absolute';
 imageNameDisplay.style.bottom = '60px';
-imageNameDisplay.style.right = '20px';
+imageNameDisplay.style.left = '20px';
 imageNameDisplay.style.color = 'white';
-imageNameDisplay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-imageNameDisplay.style.padding = '5px 10px';
-imageNameDisplay.style.borderRadius = '3px';
 imageNameDisplay.style.zIndex = '1000';
 
 document.body.appendChild(nextButton);
 document.body.appendChild(imageNameDisplay);
 
-// Setup GUI
-let gui = new GUI();
-let guiControllers = [];
-let guiFolders = {};
+// Get mask images
+async function getMaskImages() {
+    try {
+        const response = await fetch('/api/mask-images');
+        if (!response.ok) {
+            throw new Error('Failed to fetch mask images');
+        }
+        const images = await response.json();
+        console.log('API response:', images);
+        
+        if (Array.isArray(images) && images.length > 0) {
+            maskImages = images;
+            console.log('Available mask images:', maskImages);
+            return maskImages;
+        } else {
+            console.warn('No mask images found');
+            return [];
+        }
+    } catch (e) {
+        console.error('Error loading mask images:', e);
+        return [];
+    }
+}
+
+function createMeshForImage(imagePath) {
+    const geometry = new THREE.PlaneGeometry(1, 1);
+    const defaultUniforms = createDefaultUniforms();
+    const material = new THREE.ShaderMaterial({
+        vertexShader,
+        fragmentShader,
+        uniforms: defaultUniforms,
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+        blending: THREE.AdditiveBlending
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.imagePath = imagePath;
+    mesh.visible = true;
+    meshes.push(mesh);
+    scene.add(mesh);
+    
+    // Load the texture for this mesh
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load(imagePath, 
+        // Success callback
+        (texture) => {
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            mesh.material.uniforms.uMask.value = texture;
+            console.log('Texture loaded successfully:', imagePath);
+            console.log('Current uniforms:', mesh.material.uniforms);
+        },
+        // Progress callback
+        undefined,
+        // Error callback
+        (error) => {
+            console.error('Error loading texture:', imagePath, error);
+        }
+    );
+
+    return mesh;
+}
 
 function updateGUI() {
-    // Destroy and recreate the entire GUI
     if (gui) gui.destroy();
     gui = new GUI();
-    guiControllers = [];
-    guiFolders = {};
 
-    // Create new folders
-    guiFolders.flame = gui.addFolder('Flame Shape');
-    guiFolders.movement = gui.addFolder('Movement');
-    guiFolders.appearance = gui.addFolder('Appearance');
-    guiFolders.colors = gui.addFolder('Colors');
+    if (meshes.length === 0) return;
 
-    // Add controllers to Flame Shape folder
-    guiControllers.push(
-        guiFolders.flame.add(material.uniforms.uFlameHeight, 'value', 0.1, 5.0)
-            .name('Height')
-            .onChange(saveSettings),
-        guiFolders.flame.add(material.uniforms.uFlameSpread, 'value', 0.0, 2.0)
-            .name('Spread')
-            .onChange(saveSettings),
-        guiFolders.flame.add(material.uniforms.uDistortionAmount, 'value', 0.0, 2.0)
-            .name('Distortion')
-            .onChange(saveSettings),
-        guiFolders.flame.add(material.uniforms.uBaseWidth, 'value', 0.1, 2.0)
-            .name('Base Width')
-            .onChange(saveSettings),
-        guiFolders.flame.add(material.uniforms.uTipShape, 'value', 0.0, 1.0)
-            .name('Tip Shape')
-            .onChange(saveSettings)
-    );
+    const mesh = meshes[currentImageIndex];
+    if (!mesh || !mesh.material || !mesh.material.uniforms) return;
 
-    // Add controllers to Movement folder
-    guiControllers.push(
-        guiFolders.movement.add(material.uniforms.uFlameSpeed, 'value', 0.1, 5.0)
-            .name('Speed')
-            .onChange(saveSettings),
-        guiFolders.movement.add(material.uniforms.uTurbulence, 'value', 0.0, 3.0)
-            .name('Turbulence')
-            .onChange(saveSettings),
-        guiFolders.movement.add(material.uniforms.uFlickerSpeed, 'value', 0.1, 10.0)
-            .name('Flicker Speed')
-            .onChange(saveSettings),
-        guiFolders.movement.add(material.uniforms.uFlickerIntensity, 'value', 0.0, 2.0)
-            .name('Flicker Intensity')
-            .onChange(saveSettings),
-        guiFolders.movement.add(material.uniforms.uSwayAmount, 'value', 0.0, 1.0)
-            .name('Sway Amount')
-            .onChange(saveSettings),
-        guiFolders.movement.add(material.uniforms.uSwaySpeed, 'value', 0.0, 2.0)
-            .name('Sway Speed')
-            .onChange(saveSettings)
-    );
+    const uniforms = mesh.material.uniforms;
 
-    // Add controllers to Appearance folder
-    guiControllers.push(
-        guiFolders.appearance.add(material.uniforms.uSourceIntensity, 'value', 0.1, 5.0)
-            .name('Source Intensity')
-            .onChange(saveSettings),
-        guiFolders.appearance.add(material.uniforms.uNoiseScale, 'value', 0.1, 5.0)
-            .name('Noise Scale')
-            .onChange(saveSettings),
-        guiFolders.appearance.add(material.uniforms.uAlphaFalloff, 'value', 0.0, 2.0)
-            .name('Alpha Falloff')
-            .onChange(saveSettings),
-        guiFolders.appearance.add(material.uniforms.uDetailLevel, 'value', 0.1, 3.0)
-            .name('Detail Level')
-            .onChange(saveSettings),
-        guiFolders.appearance.add(material.uniforms.uBrightness, 'value', 0.0, 2.0)
-            .name('Brightness')
-            .onChange(saveSettings),
-        guiFolders.appearance.add(material.uniforms.uContrast, 'value', 0.5, 2.0)
-            .name('Contrast')
-            .onChange(saveSettings)
-    );
+    // Shape controls
+    const shapeFolder = gui.addFolder('Shape Controls');
+    shapeFolder.add(uniforms.uFlameHeight, 'value', 0.5, 3.0).name('Flame Height');
+    shapeFolder.add(uniforms.uFlameSpread, 'value', 0.0, 1.0).name('Flame Spread');
+    shapeFolder.add(uniforms.uDistortionAmount, 'value', 0.0, 1.0).name('Distortion');
+    shapeFolder.add(uniforms.uBaseWidth, 'value', 0.1, 1.0).name('Base Width');
+    shapeFolder.add(uniforms.uTipShape, 'value', 0.1, 1.0).name('Tip Shape');
 
-    // Add controllers to Colors folder
-    guiControllers.push(
-        guiFolders.colors.addColor(material.uniforms.uColor1, 'value')
-            .name('Core Color')
-            .onChange(saveSettings),
-        guiFolders.colors.addColor(material.uniforms.uColor2, 'value')
-            .name('Mid Color')
-            .onChange(saveSettings),
-        guiFolders.colors.addColor(material.uniforms.uColor3, 'value')
-            .name('Base Color')
-            .onChange(saveSettings),
-        guiFolders.colors.add(material.uniforms.uColorMix, 'value', 0.0, 1.0)
-            .name('Color Mix')
-            .onChange(saveSettings),
-        guiFolders.colors.add(material.uniforms.uColorShift, 'value', -1.0, 1.0)
-            .name('Color Shift')
-            .onChange(saveSettings)
-    );
+    // Movement controls
+    const moveFolder = gui.addFolder('Movement Controls');
+    moveFolder.add(uniforms.uFlameSpeed, 'value', 0.1, 2.0).name('Flame Speed');
+    moveFolder.add(uniforms.uTurbulence, 'value', 0.0, 1.0).name('Turbulence');
+    moveFolder.add(uniforms.uFlickerSpeed, 'value', 0.1, 5.0).name('Flicker Speed');
+    moveFolder.add(uniforms.uFlickerIntensity, 'value', 0.0, 1.0).name('Flicker Intensity');
+    moveFolder.add(uniforms.uSwayAmount, 'value', 0.0, 0.5).name('Sway Amount');
+    moveFolder.add(uniforms.uSwaySpeed, 'value', 0.1, 2.0).name('Sway Speed');
 
-    // Open all folders
-    Object.values(guiFolders).forEach(folder => folder.open());
-}
+    // Appearance controls
+    const appearanceFolder = gui.addFolder('Appearance Controls');
+    appearanceFolder.add(uniforms.uSourceIntensity, 'value', 0.5, 3.0).name('Source Intensity');
+    appearanceFolder.add(uniforms.uNoiseScale, 'value', 0.5, 4.0).name('Noise Scale');
+    appearanceFolder.add(uniforms.uAlphaFalloff, 'value', 0.1, 1.0).name('Alpha Falloff');
+    appearanceFolder.add(uniforms.uDetailLevel, 'value', 0.1, 2.0).name('Detail Level');
+    appearanceFolder.add(uniforms.uBrightness, 'value', 0.5, 2.0).name('Brightness');
+    appearanceFolder.add(uniforms.uContrast, 'value', 0.5, 2.0).name('Contrast');
 
-// Function to load mask texture
-function loadMaskTexture(index) {
-    if (maskImages.length === 0) return;
+    // Color controls
+    const colorFolder = gui.addFolder('Color Controls');
+    const color1 = { color: '#FF8019' }; // Bright orange
+    const color2 = { color: '#FF4D0D' }; // Mid orange-red
+    const color3 = { color: '#CC1A00' }; // Deep red
+
+    colorFolder.addColor(color1, 'color').name('Core Color').onChange(value => {
+        uniforms.uColor1.value.setStyle(value);
+    });
+    colorFolder.addColor(color2, 'color').name('Mid Color').onChange(value => {
+        uniforms.uColor2.value.setStyle(value);
+    });
+    colorFolder.addColor(color3, 'color').name('Base Color').onChange(value => {
+        uniforms.uColor3.value.setStyle(value);
+    });
     
-    const imagePath = maskImages[index];
-    textureLoader.load(imagePath, (texture) => {
-        maskTexture = texture;
-        material.uniforms.uMask.value = texture;
-        
-        // Update image name display
-        imageNameDisplay.textContent = imagePath.split('/').pop();
-        
-        // Load saved settings for this image or use defaults
-        const imageSettings = settingsStore[imagePath] || { ...defaultSettings };
-        
-        // Update material uniforms with settings
-        Object.entries(imageSettings).forEach(([key, value]) => {
-            if (material.uniforms[key]) {
-                if (key.startsWith('uColor') && key !== 'uColorMix' && key !== 'uColorShift') {
-                    // Handle color values
-                    material.uniforms[key].value.setHex(value);
-                } else {
-                    // Handle numeric values
-                    material.uniforms[key].value = value;
-                }
-            }
+    colorFolder.add(uniforms.uColorMix, 'value', 0.0, 1.0).name('Color Mix');
+    colorFolder.add(uniforms.uColorShift, 'value', 0.0, 1.0).name('Color Shift');
+
+    // Layer visibility
+    const visibilityFolder = gui.addFolder('Layer Visibility');
+    meshes.forEach((m, index) => {
+        const name = `Layer ${index + 1}`;
+        visibilitySettings[name] = m.visible;
+        visibilityFolder.add(visibilitySettings, name).onChange(value => {
+            m.visible = value;
         });
-        
-        // Update GUI with new settings
-        updateGUI();
     });
 }
 
-// Function to save current settings
-function saveSettings() {
-    const currentImage = maskImages[currentImageIndex];
-    const currentSettings = {};
-    
-    // Save only the properties we care about
-    Object.keys(defaultSettings).forEach(key => {
-        if (material.uniforms[key]) {
-            if (key.startsWith('uColor') && key !== 'uColorMix' && key !== 'uColorShift') {
-                // Handle color values
-                currentSettings[key] = material.uniforms[key].value.getHex();
-            } else {
-                // Handle numeric values
-                currentSettings[key] = material.uniforms[key].value;
-            }
-        }
-    });
-    
-    settingsStore[currentImage] = currentSettings;
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settingsStore));
-}
+// Initialize the scene
+async function init() {
+    // Clear existing meshes
+    meshes.forEach(mesh => scene.remove(mesh));
+    meshes.length = 0;
 
-// Add resize handler
-window.addEventListener('resize', onWindowResize, false);
-
-function onWindowResize() {
-    const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = 2;
-    
-    camera.left = frustumSize * aspect / -2;
-    camera.right = frustumSize * aspect / 2;
-    camera.top = frustumSize / 2;
-    camera.bottom = frustumSize / -2;
-    camera.updateProjectionMatrix();
-    
-    // Update plane geometry to match new aspect ratio
-    flame.geometry.dispose();
-    flame.geometry = new THREE.PlaneGeometry(frustumSize * aspect, frustumSize);
-    
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-// Add some basic CSS to remove margins and padding
-document.body.style.margin = '0';
-document.body.style.padding = '0';
-document.body.style.overflow = 'hidden';
-
-// Handle next image button click
-nextButton.addEventListener('click', () => {
-    if (maskImages.length <= 1) {
-        console.log('Only one mask image available');
-        return;
+    // Get mask images if not already loaded
+    if (maskImages.length === 0) {
+        maskImages = await getMaskImages();
     }
-    currentImageIndex = (currentImageIndex + 1) % maskImages.length;
-    loadMaskTexture(currentImageIndex);
-});
+
+    // Create a mesh for each image
+    if (Array.isArray(maskImages)) {
+        for (const imagePath of maskImages) {
+            createMeshForImage(imagePath);
+        }
+    } else {
+        console.error('maskImages is not an array:', maskImages);
+    }
+
+    // Update GUI with new meshes
+    updateGUI();
+}
 
 // Animation loop
 function animate() {
     requestAnimationFrame(animate);
-    material.uniforms.uTime.value = performance.now() / 1000;
+    const time = performance.now() / 1000;
+    
+    // Update time uniform for all meshes
+    meshes.forEach(mesh => {
+        if (mesh.material.uniforms.uTime) {
+            mesh.material.uniforms.uTime.value = time;
+        }
+        if (mesh.material.uniforms.uResolution) {
+            mesh.material.uniforms.uResolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
+        }
+    });
+    
     renderer.render(scene, camera);
 }
 
+// Add resize handler
+function handleResize() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const aspect = width / height;
+    const frustumSize = 2;
+    
+    camera.left = -frustumSize * aspect / 2;
+    camera.right = frustumSize * aspect / 2;
+    camera.top = frustumSize / 2;
+    camera.bottom = -frustumSize / 2;
+    camera.updateProjectionMatrix();
+    
+    renderer.setSize(width, height);
+    
+    // Update resolution uniform for all meshes
+    meshes.forEach(mesh => {
+        if (mesh.material.uniforms.uResolution) {
+            mesh.material.uniforms.uResolution.value = new THREE.Vector2(width, height);
+        }
+    });
+}
+
+window.addEventListener('resize', handleResize);
+
+// Add next image button handler
+nextButton.addEventListener('click', () => {
+    if (maskImages.length === 0) {
+        console.warn('No mask images available');
+        return;
+    }
+    currentImageIndex = (currentImageIndex + 1) % maskImages.length;
+    // Save settings for current meshes before proceeding
+    meshes.forEach(mesh => {
+        const imageName = mesh.imagePath.split('/').pop();
+        saveSettings(imageName, mesh.material.uniforms);
+    });
+});
+
 // Initial setup
 getMaskImages().then(() => {
-    updateGUI();
+    init();
     animate();
 });
+
+function createDefaultUniforms() {
+    return {
+        uTime: { value: 0 },
+        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+        uMask: { value: null },
+        
+        // Shape controls
+        uFlameHeight: { value: 1.5 },
+        uFlameSpread: { value: 0.5 },
+        uDistortionAmount: { value: 0.3 },
+        uBaseWidth: { value: 0.5 },
+        uTipShape: { value: 0.3 },
+        
+        // Movement controls
+        uFlameSpeed: { value: 1.0 },
+        uTurbulence: { value: 0.5 },
+        uFlickerSpeed: { value: 2.0 },
+        uFlickerIntensity: { value: 0.2 },
+        uSwayAmount: { value: 0.1 },
+        uSwaySpeed: { value: 0.5 },
+        
+        // Appearance controls
+        uSourceIntensity: { value: 2.0 },
+        uNoiseScale: { value: 2.0 },
+        uAlphaFalloff: { value: 0.5 },
+        uDetailLevel: { value: 1.0 },
+        uBrightness: { value: 1.5 },
+        uContrast: { value: 1.2 },
+        
+        // Color controls
+        uColor1: { value: new THREE.Color(1.0, 0.5, 0.1) },  // Bright orange
+        uColor2: { value: new THREE.Color(1.0, 0.3, 0.05) }, // Mid orange-red
+        uColor3: { value: new THREE.Color(0.8, 0.1, 0.0) },  // Deep red
+        uColorMix: { value: 0.5 },
+        uColorShift: { value: 0.3 }
+    };
+}
+
+function applySettings(uniforms, settings) {
+    Object.keys(settings).forEach(key => {
+        if (uniforms[key]) {
+            if (key.startsWith('uColor') && key !== 'uColorMix' && key !== 'uColorShift') {
+                // Handle color values
+                uniforms[key].value.setHex(settings[key]);
+            } else {
+                // Handle numeric values
+                uniforms[key].value = settings[key];
+            }
+        }
+    });
+}
+
+function saveSettings(imageName, uniforms) {
+    const settings = {};
+    Object.keys(uniforms).forEach(key => {
+        if (key.startsWith('uColor') && key !== 'uColorMix' && key !== 'uColorShift') {
+            // Handle color values
+            settings[key] = uniforms[key].value.getHex();
+        } else {
+            // Handle numeric values
+            settings[key] = uniforms[key].value;
+        }
+    });
+    localStorage.setItem(`flameSettings_${imageName}`, JSON.stringify(settings));
+}
+
+// Initialize settings for a new mesh
+function initializeSettings(mesh) {
+    const imageName = mesh.imagePath.split('/').pop();
+    const savedSettings = localStorage.getItem(`flameSettings_${imageName}`);
+    if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        applySettings(mesh.material.uniforms, settings);
+    } else {
+        applySettings(mesh.material.uniforms, createDefaultUniforms());
+    }
+}
