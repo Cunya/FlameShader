@@ -124,64 +124,91 @@ function updateGUI() {
 
     if (meshes.length === 0) return;
 
-    const mesh = meshes[currentImageIndex];
-    if (!mesh || !mesh.material || !mesh.material.uniforms) return;
-
-    const uniforms = mesh.material.uniforms;
-
-    // Shape controls
-    const shapeFolder = gui.addFolder('Shape Controls');
-    shapeFolder.add(uniforms.uFlameHeight, 'value', 0.5, 3.0).name('Flame Height');
-    shapeFolder.add(uniforms.uFlameSpread, 'value', 0.0, 1.0).name('Flame Spread');
-    shapeFolder.add(uniforms.uDistortionAmount, 'value', 0.0, 1.0).name('Distortion');
-    shapeFolder.add(uniforms.uBaseWidth, 'value', 0.1, 1.0).name('Base Width');
-    shapeFolder.add(uniforms.uTipShape, 'value', 0.1, 1.0).name('Tip Shape');
-
-    // Movement controls
-    const moveFolder = gui.addFolder('Movement Controls');
-    moveFolder.add(uniforms.uFlameSpeed, 'value', 0.1, 2.0).name('Flame Speed');
-    moveFolder.add(uniforms.uTurbulence, 'value', 0.0, 1.0).name('Turbulence');
-    moveFolder.add(uniforms.uFlickerSpeed, 'value', 0.1, 5.0).name('Flicker Speed');
-    moveFolder.add(uniforms.uFlickerIntensity, 'value', 0.0, 1.0).name('Flicker Intensity');
-    moveFolder.add(uniforms.uSwayAmount, 'value', 0.0, 0.5).name('Sway Amount');
-    moveFolder.add(uniforms.uSwaySpeed, 'value', 0.1, 2.0).name('Sway Speed');
-
-    // Appearance controls
-    const appearanceFolder = gui.addFolder('Appearance Controls');
-    appearanceFolder.add(uniforms.uSourceIntensity, 'value', 0.5, 3.0).name('Source Intensity');
-    appearanceFolder.add(uniforms.uNoiseScale, 'value', 0.5, 4.0).name('Noise Scale');
-    appearanceFolder.add(uniforms.uAlphaFalloff, 'value', 0.1, 1.0).name('Alpha Falloff');
-    appearanceFolder.add(uniforms.uDetailLevel, 'value', 0.1, 2.0).name('Detail Level');
-    appearanceFolder.add(uniforms.uBrightness, 'value', 0.5, 2.0).name('Brightness');
-    appearanceFolder.add(uniforms.uContrast, 'value', 0.5, 2.0).name('Contrast');
-
-    // Color controls
-    const colorFolder = gui.addFolder('Color Controls');
-    const color1 = { color: '#FF8019' }; // Bright orange
-    const color2 = { color: '#FF4D0D' }; // Mid orange-red
-    const color3 = { color: '#CC1A00' }; // Deep red
-
-    colorFolder.addColor(color1, 'color').name('Core Color').onChange(value => {
-        uniforms.uColor1.value.setStyle(value);
-    });
-    colorFolder.addColor(color2, 'color').name('Mid Color').onChange(value => {
-        uniforms.uColor2.value.setStyle(value);
-    });
-    colorFolder.addColor(color3, 'color').name('Base Color').onChange(value => {
-        uniforms.uColor3.value.setStyle(value);
-    });
-    
-    colorFolder.add(uniforms.uColorMix, 'value', 0.0, 1.0).name('Color Mix');
-    colorFolder.add(uniforms.uColorShift, 'value', 0.0, 1.0).name('Color Shift');
-
     // Layer visibility
     const visibilityFolder = gui.addFolder('Layer Visibility');
-    meshes.forEach((m, index) => {
-        const name = `Layer ${index + 1}`;
-        visibilitySettings[name] = m.visible;
-        visibilityFolder.add(visibilitySettings, name).onChange(value => {
-            m.visible = value;
+    meshes.forEach((mesh, index) => {
+        const imageName = mesh.imagePath.split('/').pop();
+        visibilitySettings[imageName] = mesh.visible;
+        visibilityFolder.add(visibilitySettings, imageName).onChange(value => {
+            mesh.visible = value;
         });
+    });
+    visibilityFolder.open();
+
+    // Add uniform controls for each mesh
+    meshes.forEach((mesh, index) => {
+        const imageName = mesh.imagePath.split('/').pop();
+        const meshFolder = gui.addFolder(`Settings - ${imageName}`);
+        
+        if (!mesh.material || !mesh.material.uniforms) return;
+        const uniforms = mesh.material.uniforms;
+        
+        // Shape controls
+        const shapeFolder = meshFolder.addFolder('Shape');
+        shapeFolder.add(uniforms.uFlameHeight, 'value', 0.5, 3.0).name('Height')
+            .onChange(() => saveSettings(imageName, uniforms));
+        shapeFolder.add(uniforms.uFlameSpread, 'value', 0.0, 1.0).name('Spread')
+            .onChange(() => saveSettings(imageName, uniforms));
+        shapeFolder.add(uniforms.uDistortionAmount, 'value', 0.0, 1.0).name('Distortion')
+            .onChange(() => saveSettings(imageName, uniforms));
+        shapeFolder.add(uniforms.uBaseWidth, 'value', 0.1, 1.0).name('Base Width')
+            .onChange(() => saveSettings(imageName, uniforms));
+        shapeFolder.add(uniforms.uTipShape, 'value', 0.1, 1.0).name('Tip Shape')
+            .onChange(() => saveSettings(imageName, uniforms));
+
+        // Movement controls
+        const moveFolder = meshFolder.addFolder('Movement');
+        moveFolder.add(uniforms.uFlameSpeed, 'value', 0.1, 2.0).name('Flame Speed')
+            .onChange(() => saveSettings(imageName, uniforms));
+        moveFolder.add(uniforms.uTurbulence, 'value', 0.0, 1.0).name('Turbulence')
+            .onChange(() => saveSettings(imageName, uniforms));
+        moveFolder.add(uniforms.uFlickerSpeed, 'value', 0.1, 5.0).name('Flicker Speed')
+            .onChange(() => saveSettings(imageName, uniforms));
+        moveFolder.add(uniforms.uFlickerIntensity, 'value', 0.0, 1.0).name('Flicker Intensity')
+            .onChange(() => saveSettings(imageName, uniforms));
+        moveFolder.add(uniforms.uSwayAmount, 'value', 0.0, 0.5).name('Sway Amount')
+            .onChange(() => saveSettings(imageName, uniforms));
+        moveFolder.add(uniforms.uSwaySpeed, 'value', 0.1, 2.0).name('Sway Speed')
+            .onChange(() => saveSettings(imageName, uniforms));
+
+        // Appearance controls
+        const appearanceFolder = meshFolder.addFolder('Appearance');
+        appearanceFolder.add(uniforms.uSourceIntensity, 'value', 0.5, 3.0).name('Source Intensity')
+            .onChange(() => saveSettings(imageName, uniforms));
+        appearanceFolder.add(uniforms.uNoiseScale, 'value', 0.5, 4.0).name('Noise Scale')
+            .onChange(() => saveSettings(imageName, uniforms));
+        appearanceFolder.add(uniforms.uAlphaFalloff, 'value', 0.1, 1.0).name('Alpha Falloff')
+            .onChange(() => saveSettings(imageName, uniforms));
+        appearanceFolder.add(uniforms.uDetailLevel, 'value', 0.1, 2.0).name('Detail Level')
+            .onChange(() => saveSettings(imageName, uniforms));
+        appearanceFolder.add(uniforms.uBrightness, 'value', 0.5, 2.0).name('Brightness')
+            .onChange(() => saveSettings(imageName, uniforms));
+        appearanceFolder.add(uniforms.uContrast, 'value', 0.5, 2.0).name('Contrast')
+            .onChange(() => saveSettings(imageName, uniforms));
+
+        // Color controls
+        const colorFolder = meshFolder.addFolder('Color');
+        const color1 = { color: '#FF8019' }; // Bright orange
+        const color2 = { color: '#FF4D0D' }; // Mid orange-red
+        const color3 = { color: '#CC1A00' }; // Deep red
+
+        colorFolder.addColor(color1, 'color').name('Core Color').onChange(value => {
+            uniforms.uColor1.value.setStyle(value);
+            saveSettings(imageName, uniforms);
+        });
+        colorFolder.addColor(color2, 'color').name('Mid Color').onChange(value => {
+            uniforms.uColor2.value.setStyle(value);
+            saveSettings(imageName, uniforms);
+        });
+        colorFolder.addColor(color3, 'color').name('Base Color').onChange(value => {
+            uniforms.uColor3.value.setStyle(value);
+            saveSettings(imageName, uniforms);
+        });
+        
+        colorFolder.add(uniforms.uColorMix, 'value', 0.0, 1.0).name('Color Mix')
+            .onChange(() => saveSettings(imageName, uniforms));
+        colorFolder.add(uniforms.uColorShift, 'value', 0.0, 1.0).name('Color Shift')
+            .onChange(() => saveSettings(imageName, uniforms));
     });
 }
 
