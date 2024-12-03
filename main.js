@@ -10,19 +10,35 @@ let maskImages = [];
 
 // Default settings for new images
 const defaultSettings = {
+    // Flame Shape
     uFlameHeight: 1.5,
     uFlameSpread: 0.2,
+    uDistortionAmount: 0.2,
+    uBaseWidth: 0.5,
+    uTipShape: 0.3,
+    
+    // Movement
     uFlameSpeed: 1.0,
     uTurbulence: 0.5,
     uFlickerSpeed: 2.0,
     uFlickerIntensity: 0.2,
+    uSwayAmount: 0.1,
+    uSwaySpeed: 0.5,
+    
+    // Appearance
     uSourceIntensity: 1.0,
     uNoiseScale: 1.0,
     uAlphaFalloff: 0.3,
-    uDistortionAmount: 0.2,
-    uColor1: 0xffeb3b,
-    uColor2: 0xff9800,
-    uColor3: 0xff5722
+    uDetailLevel: 1.0,
+    uBrightness: 1.0,
+    uContrast: 1.0,
+    
+    // Colors
+    uColor1: 0xffeb3b,  // Core color (yellow)
+    uColor2: 0xff9800,  // Mid color (orange)
+    uColor3: 0xff5722,  // Base color (red)
+    uColorMix: 0.5,     // Blend between colors
+    uColorShift: 0.0    // Shift color gradient
 };
 
 // Function to get all mask images
@@ -99,43 +115,39 @@ const geometry = new THREE.PlaneGeometry(frustumSize * aspect, frustumSize);
 const textureLoader = new THREE.TextureLoader();
 let maskTexture = null;
 
-// Create shader parameters object for GUI
-const params = {
-    flameHeight: 1.5,      // How high the flame goes
-    flameSpread: 0.15,     // How much the flame spreads horizontally
-    flameSpeed: 1.0,       // Speed of flame movement
-    turbulence: 1.0,       // Amount of turbulence
-    flickerSpeed: 3.0,     // Speed of flickering
-    flickerIntensity: 0.15,// Amount of flickering
-    sourceIntensity: 1.0,  // Intensity at source points
-    noiseScale: 1.0,       // Scale of noise
-    alphaFalloff: 0.2,     // How quickly flame fades out
-    distortionAmount: 0.3, // Amount of flame distortion
-    color1: '#ffeb94',     // Core color
-    color2: '#ff8c27',     // Middle color
-    color3: '#ff3800',     // Base color
-};
-
-// Create shader material
+// Initialize material with all uniforms
 const material = new THREE.ShaderMaterial({
-    vertexShader,
-    fragmentShader,
+    vertexShader: vertexShader,
+    fragmentShader: fragmentShader,
     uniforms: {
         uTime: { value: 0 },
         uMask: { value: null },
-        uColor1: { value: new THREE.Color(params.color1) },
-        uColor2: { value: new THREE.Color(params.color2) },
-        uColor3: { value: new THREE.Color(params.color3) },
-        uFlameHeight: { value: params.flameHeight },
-        uFlameSpread: { value: params.flameSpread },
-        uFlameSpeed: { value: params.flameSpeed },
-        uTurbulence: { value: params.turbulence },
-        uFlickerSpeed: { value: params.flickerSpeed },
-        uFlickerIntensity: { value: params.flickerIntensity },
-        uSourceIntensity: { value: params.sourceIntensity },
-        uNoiseScale: { value: params.noiseScale },
-        uAlphaFalloff: { value: params.alphaFalloff },
-        uDistortionAmount: { value: params.distortionAmount }
+        // Flame Shape
+        uFlameHeight: { value: defaultSettings.uFlameHeight },
+        uFlameSpread: { value: defaultSettings.uFlameSpread },
+        uDistortionAmount: { value: defaultSettings.uDistortionAmount },
+        uBaseWidth: { value: defaultSettings.uBaseWidth },
+        uTipShape: { value: defaultSettings.uTipShape },
+        // Movement
+        uFlameSpeed: { value: defaultSettings.uFlameSpeed },
+        uTurbulence: { value: defaultSettings.uTurbulence },
+        uFlickerSpeed: { value: defaultSettings.uFlickerSpeed },
+        uFlickerIntensity: { value: defaultSettings.uFlickerIntensity },
+        uSwayAmount: { value: defaultSettings.uSwayAmount },
+        uSwaySpeed: { value: defaultSettings.uSwaySpeed },
+        // Appearance
+        uSourceIntensity: { value: defaultSettings.uSourceIntensity },
+        uNoiseScale: { value: defaultSettings.uNoiseScale },
+        uAlphaFalloff: { value: defaultSettings.uAlphaFalloff },
+        uDetailLevel: { value: defaultSettings.uDetailLevel },
+        uBrightness: { value: defaultSettings.uBrightness },
+        uContrast: { value: defaultSettings.uContrast },
+        // Colors
+        uColor1: { value: new THREE.Color(defaultSettings.uColor1) },
+        uColor2: { value: new THREE.Color(defaultSettings.uColor2) },
+        uColor3: { value: new THREE.Color(defaultSettings.uColor3) },
+        uColorMix: { value: defaultSettings.uColorMix },
+        uColorShift: { value: defaultSettings.uColorShift }
     },
     transparent: true
 });
@@ -199,43 +211,64 @@ function updateGUI() {
 
     // Add controllers to Flame Shape folder
     guiControllers.push(
-        guiFolders.flame.add(material.uniforms.uFlameHeight, 'value', 0.5, 3.0)
+        guiFolders.flame.add(material.uniforms.uFlameHeight, 'value', 0.1, 5.0)
             .name('Height')
             .onChange(saveSettings),
-        guiFolders.flame.add(material.uniforms.uFlameSpread, 'value', 0.0, 1.0)
+        guiFolders.flame.add(material.uniforms.uFlameSpread, 'value', 0.0, 2.0)
             .name('Spread')
             .onChange(saveSettings),
-        guiFolders.flame.add(material.uniforms.uDistortionAmount, 'value', 0.0, 1.0)
+        guiFolders.flame.add(material.uniforms.uDistortionAmount, 'value', 0.0, 2.0)
             .name('Distortion')
+            .onChange(saveSettings),
+        guiFolders.flame.add(material.uniforms.uBaseWidth, 'value', 0.1, 2.0)
+            .name('Base Width')
+            .onChange(saveSettings),
+        guiFolders.flame.add(material.uniforms.uTipShape, 'value', 0.0, 1.0)
+            .name('Tip Shape')
             .onChange(saveSettings)
     );
 
     // Add controllers to Movement folder
     guiControllers.push(
-        guiFolders.movement.add(material.uniforms.uFlameSpeed, 'value', 0.1, 3.0)
+        guiFolders.movement.add(material.uniforms.uFlameSpeed, 'value', 0.1, 5.0)
             .name('Speed')
             .onChange(saveSettings),
-        guiFolders.movement.add(material.uniforms.uTurbulence, 'value', 0.0, 2.0)
+        guiFolders.movement.add(material.uniforms.uTurbulence, 'value', 0.0, 3.0)
             .name('Turbulence')
             .onChange(saveSettings),
-        guiFolders.movement.add(material.uniforms.uFlickerSpeed, 'value', 0.1, 5.0)
+        guiFolders.movement.add(material.uniforms.uFlickerSpeed, 'value', 0.1, 10.0)
             .name('Flicker Speed')
             .onChange(saveSettings),
-        guiFolders.movement.add(material.uniforms.uFlickerIntensity, 'value', 0.0, 1.0)
+        guiFolders.movement.add(material.uniforms.uFlickerIntensity, 'value', 0.0, 2.0)
             .name('Flicker Intensity')
+            .onChange(saveSettings),
+        guiFolders.movement.add(material.uniforms.uSwayAmount, 'value', 0.0, 1.0)
+            .name('Sway Amount')
+            .onChange(saveSettings),
+        guiFolders.movement.add(material.uniforms.uSwaySpeed, 'value', 0.0, 2.0)
+            .name('Sway Speed')
             .onChange(saveSettings)
     );
 
     // Add controllers to Appearance folder
     guiControllers.push(
-        guiFolders.appearance.add(material.uniforms.uSourceIntensity, 'value', 0.1, 3.0)
+        guiFolders.appearance.add(material.uniforms.uSourceIntensity, 'value', 0.1, 5.0)
             .name('Source Intensity')
             .onChange(saveSettings),
-        guiFolders.appearance.add(material.uniforms.uNoiseScale, 'value', 0.1, 3.0)
+        guiFolders.appearance.add(material.uniforms.uNoiseScale, 'value', 0.1, 5.0)
             .name('Noise Scale')
             .onChange(saveSettings),
-        guiFolders.appearance.add(material.uniforms.uAlphaFalloff, 'value', 0.0, 1.0)
+        guiFolders.appearance.add(material.uniforms.uAlphaFalloff, 'value', 0.0, 2.0)
             .name('Alpha Falloff')
+            .onChange(saveSettings),
+        guiFolders.appearance.add(material.uniforms.uDetailLevel, 'value', 0.1, 3.0)
+            .name('Detail Level')
+            .onChange(saveSettings),
+        guiFolders.appearance.add(material.uniforms.uBrightness, 'value', 0.0, 2.0)
+            .name('Brightness')
+            .onChange(saveSettings),
+        guiFolders.appearance.add(material.uniforms.uContrast, 'value', 0.5, 2.0)
+            .name('Contrast')
             .onChange(saveSettings)
     );
 
@@ -249,6 +282,12 @@ function updateGUI() {
             .onChange(saveSettings),
         guiFolders.colors.addColor(material.uniforms.uColor3, 'value')
             .name('Base Color')
+            .onChange(saveSettings),
+        guiFolders.colors.add(material.uniforms.uColorMix, 'value', 0.0, 1.0)
+            .name('Color Mix')
+            .onChange(saveSettings),
+        guiFolders.colors.add(material.uniforms.uColorShift, 'value', -1.0, 1.0)
+            .name('Color Shift')
             .onChange(saveSettings)
     );
 
@@ -274,9 +313,11 @@ function loadMaskTexture(index) {
         // Update material uniforms with settings
         Object.entries(imageSettings).forEach(([key, value]) => {
             if (material.uniforms[key]) {
-                if (key.startsWith('uColor')) {
+                if (key.startsWith('uColor') && key !== 'uColorMix' && key !== 'uColorShift') {
+                    // Handle color values
                     material.uniforms[key].value.setHex(value);
                 } else {
+                    // Handle numeric values
                     material.uniforms[key].value = value;
                 }
             }
@@ -295,9 +336,11 @@ function saveSettings() {
     // Save only the properties we care about
     Object.keys(defaultSettings).forEach(key => {
         if (material.uniforms[key]) {
-            if (key.startsWith('uColor')) {
+            if (key.startsWith('uColor') && key !== 'uColorMix' && key !== 'uColorShift') {
+                // Handle color values
                 currentSettings[key] = material.uniforms[key].value.getHex();
             } else {
+                // Handle numeric values
                 currentSettings[key] = material.uniforms[key].value;
             }
         }
