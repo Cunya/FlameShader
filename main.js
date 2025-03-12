@@ -11,7 +11,7 @@ let gui = null;
 
 // Create scene
 const scene = new THREE.Scene();
-scene.background = null;
+scene.background = new THREE.Color(0x000000);
 
 // Create renderer
 const renderer = new THREE.WebGLRenderer({ 
