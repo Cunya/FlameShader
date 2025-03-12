@@ -5,7 +5,22 @@ import path from 'node:path';
 export default defineConfig({
   base: './',
   server: {
-    cors: true
+    cors: true,
+    open: '/dev-index.html'
+  },
+  build: {
+    outDir: '.',
+    emptyOutDir: false,
+    rollupOptions: {
+      input: {
+        index: path.resolve(__dirname, 'dev-index.html')
+      },
+      output: {
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      }
+    }
   },
   plugins: [
     {

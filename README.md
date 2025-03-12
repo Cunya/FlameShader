@@ -47,9 +47,31 @@ A dynamic flame shader visualization project built with Three.js that applies cu
    ```
 3. Start the development server:
    ```bash
-   npm start
+   npm run dev
    ```
 4. Open your browser and navigate to the local development server (usually `http://localhost:5173`)
+
+### GitHub Pages Deployment
+
+This project is configured to be deployed to GitHub Pages from the main branch. The deployment is automated using GitHub Actions.
+
+To deploy to GitHub Pages:
+
+1. Push your changes to the main branch
+2. GitHub Actions will automatically build and deploy the site to GitHub Pages
+3. Your site will be available at `https://[your-username].github.io/[repository-name]/`
+
+If you want to build and deploy manually:
+
+1. Build the project:
+   ```bash
+   npm run build
+   ```
+2. Copy the PNG files to the root directory:
+   ```bash
+   cp public/*.png .
+   ```
+3. Commit and push the changes to the main branch
 
 ## Usage
 

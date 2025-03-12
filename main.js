@@ -50,7 +50,17 @@ document.body.appendChild(imageNameDisplay);
 // Get mask images
 async function getMaskImages() {
     try {
-        // Try to fetch from API endpoint first
+        // For GitHub Pages, we'll use the hardcoded list directly
+        const fallbackImages = [
+            './flame_mask.png',
+            './flame_mask_2.png',
+            './flame_mask_3.png',
+            './flame_mask_4.png',
+            './flame_mask_5.png',
+            './flame_mask_6.png'
+        ];
+        
+        // Try API endpoint first (this will work in development but not on GitHub Pages)
         try {
             const response = await fetch('./api/mask-images');
             if (response.ok) {
@@ -64,42 +74,14 @@ async function getMaskImages() {
                 }
             }
         } catch (apiError) {
-            console.warn('API endpoint not available, falling back to direct file listing');
+            console.warn('API endpoint not available, using fallback images');
         }
         
-        // Fallback: Use hardcoded list of image files
-        // This is used in production when the API endpoint is not available
-        const fallbackImages = [
-            './flame_mask.png',
-            './flame_mask_2.png',
-            './flame_mask_3.png',
-            './flame_mask_4.png',
-            './flame_mask_5.png',
-            './flame_mask_6.png'
-        ];
-        
-        // Filter out images that don't exist
-        const existingImages = [];
-        for (const imagePath of fallbackImages) {
-            try {
-                // Check if the image exists by trying to fetch it
-                const response = await fetch(imagePath, { method: 'HEAD' });
-                if (response.ok) {
-                    existingImages.push(imagePath);
-                }
-            } catch (e) {
-                console.warn(`Image ${imagePath} not found`);
-            }
-        }
-        
-        if (existingImages.length > 0) {
-            maskImages = existingImages;
-            console.log('Available mask images from fallback:', maskImages);
-            return maskImages;
-        } else {
-            console.warn('No mask images found');
-            return [];
-        }
+        // For GitHub Pages, just return the hardcoded list
+        // This is simpler and more reliable than checking each file
+        console.log('Using hardcoded image list for GitHub Pages');
+        maskImages = fallbackImages;
+        return fallbackImages;
     } catch (e) {
         console.error('Error loading mask images:', e);
         return [];

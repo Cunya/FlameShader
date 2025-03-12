@@ -1,19 +1,31 @@
-# Dependencies
-node_modules/
-npm-debug.log
-yarn-debug.log
-yarn-error.log
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Build outputs
-dist/
-build/
+node_modules
+dist
+dist-ssr
+*.local
 
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Keep the assets directory for GitHub Pages
+!assets/
+!index.html
 
 # Environment variables
 .env
@@ -22,8 +34,6 @@ build/
 
 # Debug logs
 debug.log
-logs/
-*.log
 
 # Operating System
 .DS_Store
