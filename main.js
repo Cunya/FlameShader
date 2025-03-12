@@ -4,7 +4,6 @@ import vertexShader from './shaders/flame.vert?raw';
 import fragmentShader from './shaders/flame.frag?raw';
 
 // Global variables
-let currentImageIndex = 0;
 let maskImages = [];
 const meshes = [];
 let visibilitySettings = {};  
@@ -39,21 +38,13 @@ const camera = new THREE.OrthographicCamera(
 camera.position.z = 1;
 
 // Create UI elements
-const nextButton = document.createElement('button');
-nextButton.textContent = 'Next Image';
-nextButton.style.position = 'absolute';
-nextButton.style.bottom = '20px';
-nextButton.style.left = '20px';
-nextButton.style.zIndex = '1000';
-
 const imageNameDisplay = document.createElement('div');
 imageNameDisplay.style.position = 'absolute';
-imageNameDisplay.style.bottom = '60px';
+imageNameDisplay.style.bottom = '20px';
 imageNameDisplay.style.left = '20px';
 imageNameDisplay.style.color = 'white';
 imageNameDisplay.style.zIndex = '1000';
 
-document.body.appendChild(nextButton);
 document.body.appendChild(imageNameDisplay);
 
 // Get mask images
@@ -368,20 +359,6 @@ function handleResize() {
         }
     });
 }
-
-// Add next image button handler
-nextButton.addEventListener('click', () => {
-    if (maskImages.length === 0) {
-        console.warn('No mask images available');
-        return;
-    }
-    currentImageIndex = (currentImageIndex + 1) % maskImages.length;
-    // Save settings for current meshes before proceeding
-    meshes.forEach(mesh => {
-        const imageName = mesh.imagePath.split('/').pop();
-        saveSettings(imageName, mesh.material.uniforms);
-    });
-});
 
 // Initial setup
 getMaskImages().then(() => {
