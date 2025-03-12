@@ -58,8 +58,17 @@ This project is configured to be deployed to GitHub Pages from the main branch. 
 To deploy to GitHub Pages:
 
 1. Push your changes to the main branch
-2. GitHub Actions will automatically build and deploy the site to GitHub Pages
+2. GitHub Actions will automatically build and deploy the site to GitHub Pages using the `peaceiris/actions-gh-pages` action
 3. Your site will be available at `https://[your-username].github.io/[repository-name]/`
+
+Before the first deployment, make sure to:
+
+1. Go to your repository on GitHub
+2. Click on "Settings"
+3. In the left sidebar, click on "Pages"
+4. Under "Build and deployment", select "Deploy from a branch"
+5. Select "gh-pages" branch and "/ (root)" folder
+6. Click "Save"
 
 If you want to build and deploy manually:
 
@@ -71,7 +80,7 @@ If you want to build and deploy manually:
    ```bash
    cp public/*.png .
    ```
-3. Commit and push the changes to the main branch
+3. Commit and push the changes to the gh-pages branch
 
 ## Usage
 
