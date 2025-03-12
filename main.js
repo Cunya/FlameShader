@@ -50,16 +50,51 @@ document.body.appendChild(imageNameDisplay);
 // Get mask images
 async function getMaskImages() {
     try {
-        const response = await fetch('/api/mask-images');
-        if (!response.ok) {
-            throw new Error('Failed to fetch mask images');
+        // Try to fetch from API endpoint first
+        try {
+            const response = await fetch('./api/mask-images');
+            if (response.ok) {
+                const images = await response.json();
+                console.log('API response:', images);
+                
+                if (Array.isArray(images) && images.length > 0) {
+                    maskImages = images;
+                    console.log('Available mask images from API:', maskImages);
+                    return maskImages;
+                }
+            }
+        } catch (apiError) {
+            console.warn('API endpoint not available, falling back to direct file listing');
         }
-        const images = await response.json();
-        console.log('API response:', images);
         
-        if (Array.isArray(images) && images.length > 0) {
-            maskImages = images;
-            console.log('Available mask images:', maskImages);
+        // Fallback: Use hardcoded list of image files
+        // This is used in production when the API endpoint is not available
+        const fallbackImages = [
+            './flame_mask.png',
+            './flame_mask_2.png',
+            './flame_mask_3.png',
+            './flame_mask_4.png',
+            './flame_mask_5.png',
+            './flame_mask_6.png'
+        ];
+        
+        // Filter out images that don't exist
+        const existingImages = [];
+        for (const imagePath of fallbackImages) {
+            try {
+                // Check if the image exists by trying to fetch it
+                const response = await fetch(imagePath, { method: 'HEAD' });
+                if (response.ok) {
+                    existingImages.push(imagePath);
+                }
+            } catch (e) {
+                console.warn(`Image ${imagePath} not found`);
+            }
+        }
+        
+        if (existingImages.length > 0) {
+            maskImages = existingImages;
+            console.log('Available mask images from fallback:', maskImages);
             return maskImages;
         } else {
             console.warn('No mask images found');

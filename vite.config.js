@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export default defineConfig({
+  base: './',
   server: {
     cors: true
   },
@@ -18,7 +19,7 @@ export default defineConfig({
               const files = fs.readdirSync(publicDir);
               const maskImages = files
                 .filter(file => file.toLowerCase().endsWith('.png'))
-                .map(file => '/' + file);
+                .map(file => './' + file);
 
               res.writeHead(200, {
                 'Content-Type': 'application/json',
