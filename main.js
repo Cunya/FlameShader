@@ -154,8 +154,8 @@ function updateGUI() {
         return;
     }
 
-    // Add visibility controls for each mesh
-    const visibilityFolder = gui.addFolder('Layer Visibility');
+    // Visibility controls
+    const visibilityFolder = gui.addFolder('Visibility');
     meshes.forEach((mesh, index) => {
         const imageName = mesh.imagePath.split('/').pop();
         visibilityFolder.add(mesh, 'visible')
@@ -238,6 +238,9 @@ function updateGUI() {
 
         meshFolder.close(); // Close mesh folder
     });
+
+    // Add dump settings button at the bottom
+    gui.add({ dumpSettings: () => dumpAllSettings() }, 'dumpSettings').name('Dump Settings');
 
     // Ensure GUI stays closed
     gui.close();
@@ -327,21 +330,6 @@ function animate(time) {
                     resolution.x = window.innerWidth;
                     resolution.y = window.innerHeight;
                 }
-            }
-            
-            // Log mesh state periodically
-            if (timeInSeconds % 5 < 0.1 && index === 0) {
-                const resolution = mesh.material.uniforms.uResolution.value;
-                console.log('Mesh states:', {
-                    time: timeInSeconds,
-                    resolution: resolution instanceof THREE.Vector2 ? 
-                        [resolution.x, resolution.y] : 
-                        [resolution.x, resolution.y],
-                    visible: mesh.visible,
-                    renderOrder: mesh.renderOrder,
-                    hasTexture: mesh.material.uniforms.uMask.value !== null,
-                    position: mesh.position.toArray()
-                });
             }
         }
     });
@@ -490,4 +478,55 @@ function initializeSettings(mesh) {
     } catch (error) {
         console.error('Error loading settings:', error);
     }
+}
+
+function dumpAllSettings() {
+    const allSettings = {};
+    meshes.forEach((mesh, index) => {
+        const imageName = mesh.imagePath.split('/').pop();
+        const uniforms = mesh.material.uniforms;
+        allSettings[imageName] = {
+            visibility: mesh.visible,
+            shape: {
+                flameHeight: uniforms.uFlameHeight.value,
+                flameSpread: uniforms.uFlameSpread.value,
+                baseWidth: uniforms.uBaseWidth.value,
+                tipShape: uniforms.uTipShape.value
+            },
+            movement: {
+                flameSpeed: uniforms.uFlameSpeed.value,
+                swayAmount: uniforms.uSwayAmount.value,
+                swaySpeed: uniforms.uSwaySpeed.value
+            },
+            appearance: {
+                sourceIntensity: uniforms.uSourceIntensity.value,
+                noiseScale: uniforms.uNoiseScale.value,
+                alphaFalloff: uniforms.uAlphaFalloff.value,
+                detailLevel: uniforms.uDetailLevel.value,
+                brightness: uniforms.uBrightness.value,
+                contrast: uniforms.uContrast.value
+            },
+            colors: {
+                color1: '#' + uniforms.uColor1.value.getHexString(),
+                color2: '#' + uniforms.uColor2.value.getHexString(),
+                color3: '#' + uniforms.uColor3.value.getHexString(),
+                colorMix: uniforms.uColorMix.value,
+                colorShift: uniforms.uColorShift.value
+            }
+        };
+    });
+    
+    // Create and download settings file
+    const blob = new Blob([JSON.stringify(allSettings, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'flame_settings.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    // Also log to console for easy copying
+    console.log('Current Settings:', JSON.stringify(allSettings, null, 2));
 }
