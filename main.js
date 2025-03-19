@@ -50,8 +50,8 @@ document.body.appendChild(imageNameDisplay);
 // Get mask images
 async function getMaskImages() {
     try {
-        // For GitHub Pages, we'll use the hardcoded list directly
-        const fallbackImages = [
+        // Use hardcoded list directly
+        const images = [
             './flame_mask.png',
             './flame_mask_2.png',
             './flame_mask_3.png',
@@ -60,28 +60,9 @@ async function getMaskImages() {
             './flame_mask_6.png'
         ];
         
-        // Try API endpoint first (this will work in development but not on GitHub Pages)
-        try {
-            const response = await fetch('./api/mask-images');
-            if (response.ok) {
-                const images = await response.json();
-                console.log('API response:', images);
-                
-                if (Array.isArray(images) && images.length > 0) {
-                    maskImages = images;
-                    console.log('Available mask images from API:', maskImages);
-                    return maskImages;
-                }
-            }
-        } catch (apiError) {
-            console.warn('API endpoint not available, using fallback images');
-        }
-        
-        // For GitHub Pages, just return the hardcoded list
-        // This is simpler and more reliable than checking each file
-        console.log('Using hardcoded image list for GitHub Pages');
-        maskImages = fallbackImages;
-        return fallbackImages;
+        console.log('Using hardcoded image list:', images);
+        maskImages = images;
+        return images;
     } catch (e) {
         console.error('Error loading mask images:', e);
         return [];
@@ -94,8 +75,7 @@ function createMeshForImage(imagePath, index) {
     
     // Ensure initial uniform values are set
     defaultUniforms.uTime.value = 0;
-    defaultUniforms.uResolution.value.x = window.innerWidth;
-    defaultUniforms.uResolution.value.y = window.innerHeight;
+    defaultUniforms.uResolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
     
     const material = new THREE.ShaderMaterial({
         vertexShader,
@@ -114,7 +94,6 @@ function createMeshForImage(imagePath, index) {
     mesh.position.set(0, 0, 0); // Ensure centered position
     mesh.renderOrder = index;
     meshes.push(mesh);
-    scene.add(mesh);
     
     // Load the texture for this mesh
     const textureLoader = new THREE.TextureLoader();
@@ -126,6 +105,8 @@ function createMeshForImage(imagePath, index) {
             material.uniforms.uMask.value = texture;
             material.needsUpdate = true;
             
+            // Get resolution value safely
+            const resolution = material.uniforms.uResolution.value;
             console.log('Texture loaded for mesh', index, {
                 visible: mesh.visible,
                 renderOrder: mesh.renderOrder,
@@ -133,9 +114,14 @@ function createMeshForImage(imagePath, index) {
                 uniforms: {
                     uMask: material.uniforms.uMask.value !== null,
                     uTime: material.uniforms.uTime.value,
-                    uResolution: material.uniforms.uResolution.value.toArray()
+                    uResolution: resolution instanceof THREE.Vector2 ? 
+                        [resolution.x, resolution.y] : 
+                        [resolution.x, resolution.y]
                 }
             });
+            
+            // Add mesh to scene only after texture is loaded
+            scene.add(mesh);
             
             // Initialize settings after texture is loaded
             initializeSettings(mesh);
@@ -143,6 +129,11 @@ function createMeshForImage(imagePath, index) {
         undefined,
         (error) => {
             console.error('Error loading texture:', imagePath, error);
+            // Remove mesh from meshes array if texture loading fails
+            const meshIndex = meshes.indexOf(mesh);
+            if (meshIndex !== -1) {
+                meshes.splice(meshIndex, 1);
+            }
         }
     );
 
@@ -151,103 +142,105 @@ function createMeshForImage(imagePath, index) {
 
 function updateGUI() {
     if (gui) gui.destroy();
-    gui = new GUI();
+    gui = new GUI({ 
+        autoPlace: true,
+        width: 300,
+        title: 'Flame Settings',
+        closed: true  // Ensure GUI starts closed
+    });
 
-    if (meshes.length === 0) return;
+    if (meshes.length === 0) {
+        console.warn('No meshes available for GUI');
+        return;
+    }
 
-    // Layer visibility
+    // Add visibility controls for each mesh
     const visibilityFolder = gui.addFolder('Layer Visibility');
     meshes.forEach((mesh, index) => {
         const imageName = mesh.imagePath.split('/').pop();
-        if (visibilitySettings[imageName] === undefined) {
-            visibilitySettings[imageName] = true;
-        }
-        mesh.visible = visibilitySettings[imageName];
-        
-        visibilityFolder.add(visibilitySettings, imageName)
-            .name(`Layer ${index + 1} (${imageName})`)
-            .onChange(value => {
-                mesh.visible = value;
+        visibilityFolder.add(mesh, 'visible')
+            .name(imageName)
+            .onChange((value) => {
                 console.log(`Layer ${imageName} visibility:`, value);
             });
     });
-    visibilityFolder.open();
+    visibilityFolder.close(); // Close visibility folder
 
     // Add uniform controls for each mesh
     meshes.forEach((mesh, index) => {
         const imageName = mesh.imagePath.split('/').pop();
-        const meshFolder = gui.addFolder(`Settings - Layer ${index + 1} (${imageName})`);
-        
-        if (!mesh.material || !mesh.material.uniforms) return;
         const uniforms = mesh.material.uniforms;
-        
+        const meshFolder = gui.addFolder(imageName);
+
         // Shape controls
         const shapeFolder = meshFolder.addFolder('Shape');
-        shapeFolder.add(uniforms.uFlameHeight, 'value', 0.5, 3.0).name('Height')
+        shapeFolder.add(uniforms.uFlameHeight, 'value', 0.1, 3.0).name('Height')
             .onChange(() => saveSettings(imageName, uniforms));
-        shapeFolder.add(uniforms.uFlameSpread, 'value', 0.0, 1.0).name('Spread')
-            .onChange(() => saveSettings(imageName, uniforms));
-        shapeFolder.add(uniforms.uDistortionAmount, 'value', 0.0, 1.0).name('Distortion')
+        shapeFolder.add(uniforms.uFlameSpread, 'value', 0.1, 1.0).name('Spread')
             .onChange(() => saveSettings(imageName, uniforms));
         shapeFolder.add(uniforms.uBaseWidth, 'value', 0.1, 1.0).name('Base Width')
             .onChange(() => saveSettings(imageName, uniforms));
         shapeFolder.add(uniforms.uTipShape, 'value', 0.1, 1.0).name('Tip Shape')
             .onChange(() => saveSettings(imageName, uniforms));
+        shapeFolder.close(); // Close shape folder
 
         // Movement controls
         const moveFolder = meshFolder.addFolder('Movement');
-        moveFolder.add(uniforms.uFlameSpeed, 'value', 0.1, 2.0).name('Flame Speed')
-            .onChange(() => saveSettings(imageName, uniforms));
-        moveFolder.add(uniforms.uTurbulence, 'value', 0.0, 1.0).name('Turbulence')
-            .onChange(() => saveSettings(imageName, uniforms));
-        moveFolder.add(uniforms.uFlickerSpeed, 'value', 0.1, 5.0).name('Flicker Speed')
-            .onChange(() => saveSettings(imageName, uniforms));
-        moveFolder.add(uniforms.uFlickerIntensity, 'value', 0.0, 1.0).name('Flicker Intensity')
+        moveFolder.add(uniforms.uFlameSpeed, 'value', 0.1, 2.0).name('Speed')
             .onChange(() => saveSettings(imageName, uniforms));
         moveFolder.add(uniforms.uSwayAmount, 'value', 0.0, 0.5).name('Sway Amount')
             .onChange(() => saveSettings(imageName, uniforms));
         moveFolder.add(uniforms.uSwaySpeed, 'value', 0.1, 2.0).name('Sway Speed')
             .onChange(() => saveSettings(imageName, uniforms));
+        moveFolder.close(); // Close movement folder
 
         // Appearance controls
         const appearanceFolder = meshFolder.addFolder('Appearance');
-        appearanceFolder.add(uniforms.uSourceIntensity, 'value', 0.5, 3.0).name('Source Intensity')
+        appearanceFolder.add(uniforms.uSourceIntensity, 'value', 0.1, 5.0).name('Source Intensity')
             .onChange(() => saveSettings(imageName, uniforms));
-        appearanceFolder.add(uniforms.uNoiseScale, 'value', 0.5, 4.0).name('Noise Scale')
+        appearanceFolder.add(uniforms.uNoiseScale, 'value', 0.1, 5.0).name('Noise Scale')
             .onChange(() => saveSettings(imageName, uniforms));
-        appearanceFolder.add(uniforms.uAlphaFalloff, 'value', 0.1, 1.0).name('Alpha Falloff')
+        appearanceFolder.add(uniforms.uAlphaFalloff, 'value', 0.1, 2.0).name('Alpha Falloff')
             .onChange(() => saveSettings(imageName, uniforms));
-        appearanceFolder.add(uniforms.uDetailLevel, 'value', 0.1, 2.0).name('Detail Level')
+        appearanceFolder.add(uniforms.uDetailLevel, 'value', 0.0, 1.0).name('Detail Level')
             .onChange(() => saveSettings(imageName, uniforms));
-        appearanceFolder.add(uniforms.uBrightness, 'value', 0.5, 2.0).name('Brightness')
+        appearanceFolder.add(uniforms.uBrightness, 'value', 0.1, 3.0).name('Brightness')
             .onChange(() => saveSettings(imageName, uniforms));
-        appearanceFolder.add(uniforms.uContrast, 'value', 0.5, 2.0).name('Contrast')
+        appearanceFolder.add(uniforms.uContrast, 'value', 0.1, 3.0).name('Contrast')
             .onChange(() => saveSettings(imageName, uniforms));
+        appearanceFolder.close(); // Close appearance folder
 
         // Color controls
-        const colorFolder = meshFolder.addFolder('Color');
-        const color1 = { color: '#FF8019' }; // Bright orange
-        const color2 = { color: '#FF4D0D' }; // Mid orange-red
-        const color3 = { color: '#CC1A00' }; // Deep red
-
-        colorFolder.addColor(color1, 'color').name('Core Color').onChange(value => {
-            uniforms.uColor1.value.setStyle(value);
-            saveSettings(imageName, uniforms);
-        });
-        colorFolder.addColor(color2, 'color').name('Mid Color').onChange(value => {
-            uniforms.uColor2.value.setStyle(value);
-            saveSettings(imageName, uniforms);
-        });
-        colorFolder.addColor(color3, 'color').name('Base Color').onChange(value => {
-            uniforms.uColor3.value.setStyle(value);
-            saveSettings(imageName, uniforms);
-        });
-        
+        const colorFolder = meshFolder.addFolder('Colors');
+        colorFolder.addColor({ color: uniforms.uColor1.value.getHex() }, 'color')
+            .name('Color 1')
+            .onChange((value) => {
+                uniforms.uColor1.value.setHex(value);
+                saveSettings(imageName, uniforms);
+            });
+        colorFolder.addColor({ color: uniforms.uColor2.value.getHex() }, 'color')
+            .name('Color 2')
+            .onChange((value) => {
+                uniforms.uColor2.value.setHex(value);
+                saveSettings(imageName, uniforms);
+            });
+        colorFolder.addColor({ color: uniforms.uColor3.value.getHex() }, 'color')
+            .name('Color 3')
+            .onChange((value) => {
+                uniforms.uColor3.value.setHex(value);
+                saveSettings(imageName, uniforms);
+            });
         colorFolder.add(uniforms.uColorMix, 'value', 0.0, 1.0).name('Color Mix')
             .onChange(() => saveSettings(imageName, uniforms));
-        colorFolder.add(uniforms.uColorShift, 'value', 0.0, 1.0).name('Color Shift')
+        colorFolder.add(uniforms.uColorShift, 'value', -0.5, 0.5).name('Color Shift')
             .onChange(() => saveSettings(imageName, uniforms));
+        colorFolder.close(); // Close color folder
+
+        meshFolder.close(); // Close mesh folder
     });
+
+    // Ensure GUI stays closed
+    gui.close();
 }
 
 // Initialize the scene
@@ -263,14 +256,17 @@ async function init() {
 
     // Get mask images if not already loaded
     if (maskImages.length === 0) {
+        console.log('Loading mask images...');
         maskImages = await getMaskImages();
+        console.log('Loaded mask images:', maskImages);
     }
 
     // Create a mesh for each image
-    if (Array.isArray(maskImages)) {
+    if (Array.isArray(maskImages) && maskImages.length > 0) {
         console.log('Creating meshes for', maskImages.length, 'images');
         
         maskImages.forEach((imagePath, index) => {
+            console.log('Creating mesh for image:', imagePath);
             const mesh = createMeshForImage(imagePath, index);
             const imageName = imagePath.split('/').pop();
             visibilitySettings[imageName] = true;
@@ -283,11 +279,31 @@ async function init() {
             renderOrder: m.renderOrder
         })));
     } else {
-        console.error('maskImages is not an array:', maskImages);
+        console.warn('No mask images available, creating default mesh');
+        // Create a default mesh if no images are available
+        const mesh = createMeshForImage('./flame_mask.png', 0);
+        mesh.visible = true;
+        visibilitySettings['flame_mask.png'] = true;
     }
 
     // Update GUI with new meshes
+    console.log('Updating GUI...');
     updateGUI();
+
+    // Ensure GUI stays closed after initialization
+    setTimeout(() => {
+        if (gui) {
+            gui.close();
+            // Force close all folders
+            gui.controllers.forEach(controller => {
+                if (controller.folder) {
+                    controller.folder.close();
+                }
+            });
+        }
+    }, 100);
+
+    console.log('Initialization complete');
 }
 
 // Animation loop
@@ -302,18 +318,25 @@ function animate(time) {
             // Update time uniform
             mesh.material.uniforms.uTime.value = timeInSeconds;
             
-            // Update resolution directly
-            mesh.material.uniforms.uResolution.value.x = window.innerWidth;
-            mesh.material.uniforms.uResolution.value.y = window.innerHeight;
+            // Update resolution as Vector2
+            if (mesh.material.uniforms.uResolution) {
+                const resolution = mesh.material.uniforms.uResolution.value;
+                if (resolution instanceof THREE.Vector2) {
+                    resolution.set(window.innerWidth, window.innerHeight);
+                } else {
+                    resolution.x = window.innerWidth;
+                    resolution.y = window.innerHeight;
+                }
+            }
             
             // Log mesh state periodically
             if (timeInSeconds % 5 < 0.1 && index === 0) {
+                const resolution = mesh.material.uniforms.uResolution.value;
                 console.log('Mesh states:', {
                     time: timeInSeconds,
-                    resolution: [
-                        mesh.material.uniforms.uResolution.value.x,
-                        mesh.material.uniforms.uResolution.value.y
-                    ],
+                    resolution: resolution instanceof THREE.Vector2 ? 
+                        [resolution.x, resolution.y] : 
+                        [resolution.x, resolution.y],
                     visible: mesh.visible,
                     renderOrder: mesh.renderOrder,
                     hasTexture: mesh.material.uniforms.uMask.value !== null,
@@ -328,34 +351,6 @@ function animate(time) {
 
 // Handle window resize
 function onWindowResize() {
-    const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = 2;
-    
-    camera.left = -frustumSize * aspect / 2;
-    camera.right = frustumSize * aspect / 2;
-    camera.top = frustumSize / 2;
-    camera.bottom = -frustumSize / 2;
-    
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    
-    // Update resolution for all meshes
-    meshes.forEach(mesh => {
-        if (mesh && mesh.material && mesh.material.uniforms) {
-            mesh.material.uniforms.uResolution.value.x = window.innerWidth;
-            mesh.material.uniforms.uResolution.value.y = window.innerHeight;
-        }
-    });
-}
-
-// Ensure window resize listener is added
-window.removeEventListener('resize', handleResize); // Remove old handler if it exists
-window.addEventListener('resize', onWindowResize);
-
-// Start the animation loop
-animate(0);
-
-function handleResize() {
     const width = window.innerWidth;
     const height = window.innerHeight;
     const aspect = width / height;
@@ -372,20 +367,33 @@ function handleResize() {
     // Update resolution uniform for all meshes
     meshes.forEach(mesh => {
         if (mesh.material.uniforms.uResolution) {
-            mesh.material.uniforms.uResolution.value = new THREE.Vector2(width, height);
+            const resolution = mesh.material.uniforms.uResolution.value;
+            if (resolution instanceof THREE.Vector2) {
+                resolution.set(width, height);
+            } else {
+                resolution.x = width;
+                resolution.y = height;
+            }
         }
     });
 }
 
-// Initial setup
-getMaskImages().then(() => {
-    init();
+// Ensure window resize listener is added
+window.removeEventListener('resize', onWindowResize); // Remove old handler if it exists
+window.addEventListener('resize', onWindowResize);
+
+// Initialize the scene
+init().then(() => {
+    // Start the animation loop after initialization
+    animate(0);
+}).catch(error => {
+    console.error('Failed to initialize scene:', error);
 });
 
 function createDefaultUniforms() {
     return {
         uTime: { value: 0 },
-        uResolution: { value: { x: window.innerWidth, y: window.innerHeight } },
+        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
         uMask: { value: null },
         
         // Shape controls
@@ -428,6 +436,15 @@ function applySettings(uniforms, settings) {
                 const color = new THREE.Color();
                 color.setHex(settings[key]);
                 uniforms[key].value.copy(color);
+            } else if (key === 'uResolution') {
+                // Handle resolution value
+                const value = uniforms[key].value;
+                if (value instanceof THREE.Vector2) {
+                    value.set(settings[key][0], settings[key][1]);
+                } else {
+                    value.x = settings[key][0];
+                    value.y = settings[key][1];
+                }
             } else {
                 // Handle numeric values
                 uniforms[key].value = settings[key];
@@ -442,13 +459,19 @@ function saveSettings(imageName, uniforms) {
         if (key.startsWith('uColor') && key !== 'uColorMix' && key !== 'uColorShift') {
             // Handle color values
             settings[key] = uniforms[key].value.getHexString();
+        } else if (key === 'uResolution') {
+            // Handle resolution value
+            const value = uniforms[key].value;
+            settings[key] = value instanceof THREE.Vector2 ? 
+                [value.x, value.y] : 
+                [value.x, value.y];
         } else {
             // Handle numeric values
             settings[key] = uniforms[key].value;
         }
     });
     try {
-        localStorage.setItem(`flameSettings_${imageName}`, JSON.stringify(settings));
+        localStorage.setItem(`flame_settings_${imageName}`, JSON.stringify(settings));
         console.log('Saved settings for', imageName, settings);
     } catch (error) {
         console.error('Error saving settings:', error);
@@ -458,7 +481,7 @@ function saveSettings(imageName, uniforms) {
 function initializeSettings(mesh) {
     const imageName = mesh.imagePath.split('/').pop();
     try {
-        const savedSettings = localStorage.getItem(`flameSettings_${imageName}`);
+        const savedSettings = localStorage.getItem(`flame_settings_${imageName}`);
         if (savedSettings) {
             const settings = JSON.parse(savedSettings);
             applySettings(mesh.material.uniforms, settings);

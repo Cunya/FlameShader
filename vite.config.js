@@ -30,10 +30,10 @@ export default defineConfig({
         server.middlewares.use('/api/mask-images', (req, res) => {
           if (req.method === 'GET') {
             try {
-              const publicDir = path.join(process.cwd(), 'public');
-              const files = fs.readdirSync(publicDir);
+              const rootDir = process.cwd();
+              const files = fs.readdirSync(rootDir);
               const maskImages = files
-                .filter(file => file.toLowerCase().endsWith('.png'))
+                .filter(file => file.toLowerCase().startsWith('flame_mask') && file.toLowerCase().endsWith('.png'))
                 .map(file => './' + file);
 
               res.writeHead(200, {
