@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
+import * as THREE from '/node_modules/three/build/three.module.js';
+import { GUI } from '/node_modules/three/examples/jsm/libs/lil-gui.module.min.js';
 import vertexShader from './shaders/flame.vert?raw';
 import fragmentShader from './shaders/flame.frag?raw';
 
@@ -83,14 +83,14 @@ const BLEND_MODES = {
 // Get mask images
 async function getMaskImages() {
     try {
-        // Use hardcoded list directly
+        // Use all mask images from public folder
         const images = [
-            './flame_mask.png',
-            './flame_mask_2.png',
-            './flame_mask_3.png',
-            './flame_mask_4.png',
-            './flame_mask_5.png',
-            './flame_mask_6.png'
+            '/flame_mask.png',
+            '/flame_mask_2.png',
+            '/flame_mask_3.png',
+            '/flame_mask_4.png',
+            '/flame_mask_5.png',
+            '/flame_mask_6.png'
         ];
         
         console.log('Using hardcoded image list:', images);
@@ -396,7 +396,7 @@ async function init() {
     } else {
         console.warn('No mask images available, creating default mesh');
         // Create a default mesh if no images are available
-        const mesh = createMeshForImage('./flame_mask.png', 0);
+        const mesh = createMeshForImage('/flame_mask.png', 0);
         mesh.visible = true;
         visibilitySettings['flame_mask.png'] = true;
     }

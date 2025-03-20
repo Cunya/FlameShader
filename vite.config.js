@@ -9,6 +9,9 @@ export default defineConfig(({ command }) => ({
       'three': path.resolve(__dirname, 'node_modules/three')
     }
   },
+  optimizeDeps: {
+    include: ['three']
+  },
   server: {
     cors: true,
     open: true
@@ -16,6 +19,7 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    assetsInclude: ['**/*.png'],
     rollupOptions: {
       input: {
         index: path.resolve(__dirname, 'index.html')
