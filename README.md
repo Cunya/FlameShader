@@ -59,34 +59,25 @@ A dynamic flame shader visualization project built with Three.js that applies cu
 
 ### GitHub Pages Deployment
 
-This project is configured to be deployed to GitHub Pages from the main branch. The deployment is automated using GitHub Actions.
-
-To deploy to GitHub Pages:
-
-1. Push your changes to the main branch
-2. GitHub Actions will automatically build and deploy the site to GitHub Pages using the `peaceiris/actions-gh-pages` action
-3. Your site will be available at `https://[your-username].github.io/[repository-name]/`
-
-Before the first deployment, make sure to:
-
-1. Go to your repository on GitHub
-2. Click on "Settings"
-3. In the left sidebar, click on "Pages"
-4. Under "Build and deployment", select "Deploy from a branch"
-5. Select "gh-pages" branch and "/ (root)" folder
-6. Click "Save"
-
-If you want to build and deploy manually:
+This project is configured to be deployed to GitHub Pages. The deployment process is as follows:
 
 1. Build the project:
    ```bash
    npm run build
    ```
-2. Copy the PNG files to the root directory:
+
+2. The build output will be in the `dist` directory
+
+3. Push the contents of the `dist` directory to the `gh-pages` branch:
    ```bash
-   cp public/*.png .
+   git add dist -f
+   git commit -m "Deploy to GitHub Pages"
+   git subtree push --prefix dist origin gh-pages
    ```
-3. Commit and push the changes to the gh-pages branch
+
+4. Your site will be available at `https://[your-username].github.io/FlameShader2-WindsurfTest/`
+
+Note: Make sure your repository settings have GitHub Pages enabled and set to deploy from the gh-pages branch.
 
 ## Usage
 

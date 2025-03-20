@@ -2,23 +2,28 @@ import { defineConfig } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export default defineConfig({
-  base: './',
+export default defineConfig(({ command }) => ({
+  base: command === 'serve' ? '/' : '/FlameShader2-WindsurfTest/',
   server: {
     cors: true,
-    open: '/dev-index.html'
+    open: true
   },
   build: {
-    outDir: '.',
-    emptyOutDir: false,
+    outDir: 'dist',
+    emptyOutDir: true,
     rollupOptions: {
       input: {
-        index: path.resolve(__dirname, 'dev-index.html')
+        index: path.resolve(__dirname, 'index.html')
       },
       output: {
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name.endsWith('.png')) {
+            return 'Flame-images/[name][extname]';
+          }
+          return 'assets/[name].[hash][extname]';
+        }
       }
     }
   },
@@ -30,11 +35,11 @@ export default defineConfig({
         server.middlewares.use('/api/mask-images', (req, res) => {
           if (req.method === 'GET') {
             try {
-              const rootDir = process.cwd();
-              const files = fs.readdirSync(rootDir);
+              const imagesDir = path.join(process.cwd(), 'Flame-images');
+              const files = fs.readdirSync(imagesDir);
               const maskImages = files
                 .filter(file => file.toLowerCase().startsWith('flame_mask') && file.toLowerCase().endsWith('.png'))
-                .map(file => './' + file);
+                .map(file => './Flame-images/' + file);
 
               res.writeHead(200, {
                 'Content-Type': 'application/json',
@@ -55,4 +60,4 @@ export default defineConfig({
       }
     }
   ]
-});
+}));
