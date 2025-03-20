@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
-import vertexShader from './shaders/flame.vert?raw';
-import fragmentShader from './shaders/flame.frag?raw';
+import vertexShaderSource from './shaders/flame.vert?raw';
+import fragmentShaderSource from './shaders/flame.frag?raw';
 
 // Global variables
 let maskImages = [];
@@ -120,8 +120,8 @@ function createMeshForImage(imagePath, index) {
     });
     
     const material = new THREE.ShaderMaterial({
-        vertexShader,
-        fragmentShader,
+        vertexShader: vertexShaderSource,
+        fragmentShader: fragmentShaderSource,
         uniforms: defaultUniforms,
         transparent: true,
         depthWrite: false,

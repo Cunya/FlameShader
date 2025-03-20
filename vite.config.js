@@ -19,7 +19,7 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    assetsInclude: ['**/*.png', '**/*.vert', '**/*.frag'],
+    assetsInclude: ['**/*.png'],
     rollupOptions: {
       input: {
         index: path.resolve(__dirname, 'index.html')
@@ -31,15 +31,24 @@ export default defineConfig(({ command }) => ({
           if (assetInfo.name.endsWith('.png')) {
             return 'Flame-images/[name][extname]';
           }
-          if (assetInfo.name.endsWith('.vert') || assetInfo.name.endsWith('.frag')) {
-            return 'shaders/[name][extname]';
-          }
           return 'assets/[name].[hash][extname]';
         }
       }
     }
   },
+  assetsInclude: ['/shaders/*.vert', '/shaders/*.frag'],
   plugins: [
+    {
+      name: 'vite-plugin-glsl',
+      transform(code, id) {
+        if (/\.(vert|frag)$/.test(id)) {
+          return {
+            code: `export default ${JSON.stringify(code)};`,
+            map: null
+          };
+        }
+      }
+    },
     {
       name: 'mask-images',
       configureServer(server) {
