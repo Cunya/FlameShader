@@ -71,6 +71,15 @@ imageNameDisplay.style.zIndex = '1000';
 
 document.body.appendChild(imageNameDisplay);
 
+// Define available blending modes
+const BLEND_MODES = {
+    'Additive': THREE.AdditiveBlending,
+    'Normal': THREE.NormalBlending,
+    'Multiply': THREE.MultiplyBlending,
+    'Subtract': THREE.SubtractiveBlending,
+    'Screen': THREE.CustomBlending
+};
+
 // Get mask images
 async function getMaskImages() {
     try {
@@ -126,6 +135,7 @@ function createMeshForImage(imagePath, index) {
     mesh.visible = true;
     mesh.position.set(0, 0, 0); // Ensure centered position
     mesh.renderOrder = index;
+    mesh.blendMode = 'Additive'; // Store current blend mode name
     
     // Store mesh reference in uniforms immediately
     material.uniforms.mesh = { value: mesh };
@@ -220,6 +230,16 @@ function updateGUI() {
             .onChange((value) => {
                 console.log(`Layer ${imageName} visibility changed to:`, value);
                 // Save settings when visibility changes
+                saveSettings(imageName, mesh.material.uniforms);
+            });
+            
+        // Add blend mode control for each layer
+        visibilityFolder.add(mesh, 'blendMode', Object.keys(BLEND_MODES))
+            .name(imageName + ' Blend')
+            .onChange((value) => {
+                mesh.material.blending = BLEND_MODES[value];
+                mesh.material.needsUpdate = true;
+                console.log(`Layer ${imageName} blend mode changed to:`, value);
                 saveSettings(imageName, mesh.material.uniforms);
             });
     });
@@ -608,7 +628,9 @@ function saveSettings(imageName, uniforms) {
     const mesh = uniforms.mesh?.value;
     if (mesh) {
         settings.visible = mesh.visible;
+        settings.blendMode = mesh.blendMode;
         console.log('Saving visibility state:', settings.visible);
+        console.log('Saving blend mode:', settings.blendMode);
     }
     
     Object.keys(uniforms).forEach(key => {
@@ -655,12 +677,18 @@ function initializeSettings(mesh) {
             const settings = JSON.parse(savedSettings);
             console.log('Found saved settings:', settings);
             
-            // Apply visibility state if explicitly set, otherwise keep visible
+            // Apply visibility state if explicitly set
             if ('visible' in settings) {
                 mesh.visible = settings.visible;
                 console.log('Applied visibility from settings:', mesh.visible);
-            } else {
-                console.log('No visibility setting found, keeping visible');
+            }
+            
+            // Apply blend mode if saved
+            if ('blendMode' in settings && BLEND_MODES[settings.blendMode]) {
+                mesh.blendMode = settings.blendMode;
+                mesh.material.blending = BLEND_MODES[settings.blendMode];
+                mesh.material.needsUpdate = true;
+                console.log('Applied blend mode from settings:', settings.blendMode);
             }
             
             // Apply other settings
