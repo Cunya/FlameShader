@@ -4,6 +4,11 @@ import path from 'node:path';
 
 export default defineConfig(({ command }) => ({
   base: command === 'serve' ? '/' : '/FlameShader2-WindsurfTest/',
+  resolve: {
+    alias: {
+      'three': path.resolve(__dirname, 'node_modules/three')
+    }
+  },
   server: {
     cors: true,
     open: true
