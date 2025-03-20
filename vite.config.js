@@ -7,7 +7,7 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    assetsInclude: ['**/*.png'],
+    assetsInclude: ['**/*.png', '**/*.frag', '**/*.vert'],
     rollupOptions: {
       input: {
         index: path.resolve(__dirname, 'index.html')
@@ -19,7 +19,7 @@ export default defineConfig(({ command }) => ({
           if (assetInfo.name.endsWith('.png')) {
             return 'Flame-images/[name][extname]';
           }
-          if (assetInfo.name.endsWith('.vert') || assetInfo.name.endsWith('.frag')) {
+          if (assetInfo.name.endsWith('.frag') || assetInfo.name.endsWith('.vert')) {
             return 'shaders/[name][extname]';
           }
           return 'assets/[name].[hash][extname]';

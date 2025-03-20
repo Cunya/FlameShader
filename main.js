@@ -1,7 +1,21 @@
 import * as THREE from 'https://unpkg.com/three@0.157.0/build/three.module.js';
 import { GUI } from 'https://unpkg.com/three@0.157.0/examples/jsm/libs/lil-gui.module.min.js';
-import vertexShaderSource from './shaders/flame.vert?raw';
-import fragmentShaderSource from './shaders/flame.frag?raw';
+
+// Import shaders as text
+const vertexShaderSource = `
+    varying vec2 vUv;
+    void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+`;
+
+let fragmentShaderSource = '';
+
+// Load fragment shader
+async function loadShaders() {
+    fragmentShaderSource = await fetch('./shaders/flame.frag').then(r => r.text());
+}
 
 // Global variables
 let maskImages = [];
@@ -328,6 +342,9 @@ function updateGUI() {
 // Initialize the scene
 async function init() {
     console.log('Initializing scene...');
+    
+    // Load shaders first
+    await loadShaders();
     
     // Clear existing meshes
     meshes.forEach(mesh => scene.remove(mesh));
