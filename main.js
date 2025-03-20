@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
+import * as THREE from 'https://unpkg.com/three@0.157.0/build/three.module.js';
+import { GUI } from 'https://unpkg.com/three@0.157.0/examples/jsm/libs/lil-gui.module.min.js';
 import vertexShaderSource from './shaders/flame.vert?raw';
 import fragmentShaderSource from './shaders/flame.frag?raw';
 

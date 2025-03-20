@@ -4,18 +4,6 @@ import path from 'node:path';
 
 export default defineConfig(({ command }) => ({
   base: command === 'serve' ? '/' : '/FlameShader2-WindsurfTest/',
-  resolve: {
-    alias: {
-      'three': 'three'
-    }
-  },
-  optimizeDeps: {
-    include: ['three', 'three/examples/jsm/libs/lil-gui.module.min.js']
-  },
-  server: {
-    cors: true,
-    open: true
-  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
@@ -31,12 +19,14 @@ export default defineConfig(({ command }) => ({
           if (assetInfo.name.endsWith('.png')) {
             return 'Flame-images/[name][extname]';
           }
+          if (assetInfo.name.endsWith('.vert') || assetInfo.name.endsWith('.frag')) {
+            return 'shaders/[name][extname]';
+          }
           return 'assets/[name].[hash][extname]';
         }
       }
     }
   },
-  assetsInclude: ['/shaders/*.vert', '/shaders/*.frag'],
   plugins: [
     {
       name: 'vite-plugin-glsl',
