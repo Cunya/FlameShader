@@ -1,6 +1,6 @@
 # Flame Shader done with Windsurf and Claude 3.5
 
-A dynamic flame shader visualization project built with Three.js that applies customizable flame effects with images. The project uses WebGL shaders to create realistic flame animations that can be masked to follow specific image shapes.
+A dynamic flame shader visualization project built with Three.js that applies customizable flame effects with images. The project was developed using Windsurf IDE and uses WebGL shaders to create realistic flame animations that can be masked to follow specific image shapes.
 
 ## Features
 
@@ -14,7 +14,8 @@ A dynamic flame shader visualization project built with Three.js that applies cu
 ## Technologies Used
 
 - Three.js (v0.157.0) - 3D graphics library
-- Vite - Build tool and development server
+- Vite (v4.5.0) - Build tool and development server
+- Express.js - Production server
 - GLSL - Shader programming language
 - JavaScript (ES6+)
 
@@ -22,13 +23,18 @@ A dynamic flame shader visualization project built with Three.js that applies cu
 
 ```
 ├── main.js              # Main application entry point
-├── shaders/             # GLSL shader files
-│   ├── flame.vert       # Vertex shader
-│   ├── flame.frag       # Fragment shader
-├── public/              # Public assets
-├── Flame-images/        # Image assets for flame effects
 ├── index.html          # HTML entry point
-└── vite.config.js      # Vite configuration
+├── dev-index.html      # Development HTML entry point
+├── server.js           # Express server for production
+├── vite.config.js      # Vite configuration
+├── shaders/            # GLSL shader files
+│   ├── flame.vert      # Vertex shader
+│   ├── flame.frag      # Fragment shader
+├── assets/             # Project assets
+├── docs/               # Documentation files
+├── public/             # Public static assets
+├── Flame-images/       # Image assets for flame effects
+└── dist/               # Production build output
 ```
 
 ## Getting Started
@@ -85,7 +91,7 @@ If you want to build and deploy manually:
 ## Usage
 
 The application provides an interactive interface where you can:
-- View flame effects applied to windsurfing images
+- View flame effects applied to images
 - Adjust flame parameters using the GUI controls
 - Switch between different images
 - Customize flame behavior and appearance
@@ -103,8 +109,10 @@ The interface includes controls for:
 
 The project uses Vite for development and building. Available scripts:
 
-- `npm start` - Start development server
+- `npm run dev` - Start development server
 - `npm run build` - Build for production
+- `npm run preview` - Preview production build locally
+- `npm run serve` - Run production server
 
 ## License
 
