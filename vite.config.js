@@ -6,11 +6,11 @@ export default defineConfig(({ command }) => ({
   base: command === 'serve' ? '/' : '/FlameShader2-WindsurfTest/',
   resolve: {
     alias: {
-      'three': path.resolve(__dirname, 'node_modules/three')
+      'three': 'three'
     }
   },
   optimizeDeps: {
-    include: ['three']
+    include: ['three', 'three/examples/jsm/libs/lil-gui.module.min.js']
   },
   server: {
     cors: true,
@@ -19,7 +19,7 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    assetsInclude: ['**/*.png'],
+    assetsInclude: ['**/*.png', '**/*.vert', '**/*.frag'],
     rollupOptions: {
       input: {
         index: path.resolve(__dirname, 'index.html')
@@ -30,6 +30,9 @@ export default defineConfig(({ command }) => ({
         assetFileNames: (assetInfo) => {
           if (assetInfo.name.endsWith('.png')) {
             return 'Flame-images/[name][extname]';
+          }
+          if (assetInfo.name.endsWith('.vert') || assetInfo.name.endsWith('.frag')) {
+            return 'shaders/[name][extname]';
           }
           return 'assets/[name].[hash][extname]';
         }
