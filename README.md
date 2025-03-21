@@ -106,12 +106,3 @@ The project uses Vite for development and building. Available scripts:
 - `npm run preview` - Preview production build locally
 - `npm run serve` - Run production server
 
-## License
-
-This project is open source and available under the MIT License.
-
-## Acknowledgments
-
-- Three.js community for the 3D graphics framework
-- GLSL shader programming resources and community
-- Contributors and maintainers of the dependencies 
