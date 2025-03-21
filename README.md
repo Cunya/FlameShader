@@ -1,6 +1,7 @@
 # Flame Shader done with Windsurf and Claude 3.5
 
 A dynamic flame shader visualization project built with Three.js that applies customizable flame effects with images. The project was developed using Windsurf IDE and uses WebGL shaders to create realistic flame animations that can be masked to follow specific image shapes.
+This project is part of a series of experiments in LLM-assisted code generation, developed entirely through conversation with Claude (Anthropic's Claude-3-Sonnet) using the Cursor editor.
 
 ## Features
 
