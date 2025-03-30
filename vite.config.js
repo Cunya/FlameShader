@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export default defineConfig(({ command }) => ({
-  base: command === 'serve' ? '/' : '/FlameShader2-WindsurfTest/',
+  base: command === 'serve' ? '/' : '/FlameShader/',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
