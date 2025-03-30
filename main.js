@@ -667,6 +667,52 @@ function saveSettings(imageName, uniforms) {
     }
 }
 
+function initializeSettings(mesh) {
+    const imageName = mesh.imagePath.split('/').pop();
+    console.log('Initializing settings for', imageName);
+    try {
+        // Store mesh reference in uniforms first
+        mesh.material.uniforms.mesh = { value: mesh };
+        console.log('Stored mesh reference in uniforms');
+        
+        // Set default visibility to true
+        mesh.visible = true;
+        
+        const savedSettings = localStorage.getItem(`flameSettings_${imageName}`);
+        if (savedSettings) {
+            const settings = JSON.parse(savedSettings);
+            console.log('Found saved settings:', settings);
+            
+            // Apply visibility state if explicitly set
+            if ('visible' in settings) {
+                mesh.visible = settings.visible;
+                console.log('Applied visibility from settings:', mesh.visible);
+            }
+            
+            // Apply blend mode if saved
+            if ('blendMode' in settings && BLEND_MODES[settings.blendMode]) {
+                mesh.blendMode = settings.blendMode;
+                mesh.material.blending = BLEND_MODES[settings.blendMode];
+                mesh.material.needsUpdate = true;
+                console.log('Applied blend mode from settings:', settings.blendMode);
+            }
+            
+            // Apply other settings
+            applySettings(mesh.material.uniforms, settings);
+            console.log('Successfully applied all settings for', imageName, 'final visibility:', mesh.visible);
+        } else {
+            console.log('No saved settings found for', imageName);
+            // Save initial state with visibility true
+            saveSettings(imageName, mesh.material.uniforms);
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        // Ensure mesh is visible even if there's an error
+        mesh.visible = true;
+        console.log('Error occurred, defaulting to visible');
+    }
+}
+
 function dumpAllSettings() {
     console.log('Dumping all settings...');
     Object.keys(localStorage).forEach(key => {
