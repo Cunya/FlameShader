@@ -19,9 +19,6 @@ export default defineConfig(({ command }) => ({
           if (assetInfo.name.endsWith('.png')) {
             return 'Flame-images/[name][extname]';
           }
-          if (assetInfo.name.endsWith('.frag') || assetInfo.name.endsWith('.vert')) {
-            return 'shaders/[name][extname]';
-          }
           return 'assets/[name].[hash][extname]';
         }
       }

@@ -1,21 +1,14 @@
 import * as THREE from 'three';
 import { GUI } from 'lil-gui';
 
-// Import shaders as text
-const vertexShaderSource = `
-    varying vec2 vUv;
-    void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-`;
+// Import shaders directly as strings
+import vertexShaderSource from './shaders/flame.vert';
+import fragmentShaderSource from './shaders/flame.frag';
 
-let fragmentShaderSource = '';
-
-// Load fragment shader
-async function loadShaders() {
-    fragmentShaderSource = await fetch('./shaders/flame.frag').then(r => r.text());
-}
+// Removed old shader variables and load function
+// const vertexShaderSource = `...`;
+// let fragmentShaderSource = '';
+// async function loadShaders() { ... }
 
 // Global variables
 let maskImages = [];
@@ -343,9 +336,6 @@ function updateGUI() {
 async function init() {
     console.log('Initializing scene...');
     
-    // Load shaders first
-    await loadShaders();
-    
     // Clear existing meshes
     meshes.forEach(mesh => scene.remove(mesh));
     meshes.length = 0;
@@ -672,105 +662,16 @@ function saveSettings(imageName, uniforms) {
     
     try {
         localStorage.setItem(`flameSettings_${imageName}`, JSON.stringify(settings));
-        console.log('Successfully saved settings for', imageName, 'with visibility:', settings.visible);
     } catch (error) {
         console.error('Error saving settings:', error);
     }
 }
 
-function initializeSettings(mesh) {
-    const imageName = mesh.imagePath.split('/').pop();
-    console.log('Initializing settings for', imageName);
-    try {
-        // Store mesh reference in uniforms first
-        mesh.material.uniforms.mesh = { value: mesh };
-        console.log('Stored mesh reference in uniforms');
-        
-        // Set default visibility to true
-        mesh.visible = true;
-        
-        const savedSettings = localStorage.getItem(`flameSettings_${imageName}`);
-        if (savedSettings) {
-            const settings = JSON.parse(savedSettings);
-            console.log('Found saved settings:', settings);
-            
-            // Apply visibility state if explicitly set
-            if ('visible' in settings) {
-                mesh.visible = settings.visible;
-                console.log('Applied visibility from settings:', mesh.visible);
-            }
-            
-            // Apply blend mode if saved
-            if ('blendMode' in settings && BLEND_MODES[settings.blendMode]) {
-                mesh.blendMode = settings.blendMode;
-                mesh.material.blending = BLEND_MODES[settings.blendMode];
-                mesh.material.needsUpdate = true;
-                console.log('Applied blend mode from settings:', settings.blendMode);
-            }
-            
-            // Apply other settings
-            applySettings(mesh.material.uniforms, settings);
-            console.log('Successfully applied all settings for', imageName, 'final visibility:', mesh.visible);
-        } else {
-            console.log('No saved settings found for', imageName);
-            // Save initial state with visibility true
-            saveSettings(imageName, mesh.material.uniforms);
-        }
-    } catch (error) {
-        console.error('Error loading settings:', error);
-        // Ensure mesh is visible even if there's an error
-        mesh.visible = true;
-        console.log('Error occurred, defaulting to visible');
-    }
-}
-
 function dumpAllSettings() {
-    const allSettings = {};
-    meshes.forEach((mesh, index) => {
-        const imageName = mesh.imagePath.split('/').pop();
-        const uniforms = mesh.material.uniforms;
-        allSettings[imageName] = {
-            visibility: mesh.visible,
-            shape: {
-                flameHeight: uniforms.uFlameHeight.value,
-                flameSpread: uniforms.uFlameSpread.value,
-                baseWidth: uniforms.uBaseWidth.value,
-                tipShape: uniforms.uTipShape.value
-            },
-            movement: {
-                flameSpeed: uniforms.uFlameSpeed.value,
-                swayAmount: uniforms.uSwayAmount.value,
-                swaySpeed: uniforms.uSwaySpeed.value
-            },
-            appearance: {
-                sourceIntensity: uniforms.uSourceIntensity.value,
-                noiseScale: uniforms.uNoiseScale.value,
-                alphaFalloff: uniforms.uAlphaFalloff.value,
-                detailLevel: uniforms.uDetailLevel.value,
-                brightness: uniforms.uBrightness.value,
-                contrast: uniforms.uContrast.value
-            },
-            colors: {
-                color1: '#' + uniforms.uColor1.value.getHexString(),
-                color2: '#' + uniforms.uColor2.value.getHexString(),
-                color3: '#' + uniforms.uColor3.value.getHexString(),
-                colorMix: uniforms.uColorMix.value,
-                colorShift: uniforms.uColorShift.value
-            }
-        };
+    console.log('Dumping all settings...');
+    Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('flameSettings_')) {
+            console.log(`Settings for ${key}:`, localStorage.getItem(key));
+        }
     });
-    
-    // Create and download settings file
-    const blob = new Blob([JSON.stringify(allSettings, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'flame_settings.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    // Also log to console for easy copying
-    console.log('Current Settings:', JSON.stringify(allSettings, null, 2));
 }
