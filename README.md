@@ -108,3 +108,4 @@ The project uses Vite for development and building. Available scripts:
 - `npm run preview` - Preview production build locally
 - `npm run serve` - Run production server
 
+
